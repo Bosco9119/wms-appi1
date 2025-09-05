@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/services/shop_service.dart';
 import '../../../shared/models/shop_model.dart';
+import '../../../core/navigation/route_names.dart';
 
 class ShopDetailsScreen extends StatefulWidget {
   final String shopId;
@@ -265,24 +267,19 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implement booking
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Booking feature coming soon!'),
-                        ),
-                      );
-                    },
+                    onPressed: shop.isOpen ? () {
+                      context.go(RouteNames.bookingRoute(widget.shopId, shop.name));
+                    } : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCF2049),
+                      backgroundColor: shop.isOpen ? const Color(0xFFCF2049) : Colors.grey,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Book Now',
-                      style: TextStyle(
+                    child: Text(
+                      shop.isOpen ? 'Book Service' : 'Shop Closed',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),

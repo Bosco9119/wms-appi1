@@ -11,9 +11,12 @@ class RouteNames {
   static const String feedback = '/feedback';
 
   // Service Booking Routes
-  static const String booking = '/booking';
   static const String searchShops = '/search-shops';
   static const String shopDetails = '/shop-details';
+
+  // Helper methods for route generation
+  static String bookingRoute(String shopId, String shopName) =>
+      '/booking/$shopId/${Uri.encodeComponent(shopName)}';
 
   // Appointment Routes
   static const String appointmentDetails = '/appointment';

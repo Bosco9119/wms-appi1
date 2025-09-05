@@ -16,9 +16,7 @@ class PersistentDrawer extends StatelessWidget {
           Consumer<CustomerProvider>(
             builder: (context, customerProvider, child) {
               return UserAccountsDrawerHeader(
-                decoration: const BoxDecoration(
-                  color: const Color(0xFFCF2049),
-                ),
+                decoration: const BoxDecoration(color: const Color(0xFFCF2049)),
                 accountName: Text(
                   customerProvider.currentCustomer?.fullName ?? 'Guest User',
                   style: const TextStyle(
@@ -27,14 +25,17 @@ class PersistentDrawer extends StatelessWidget {
                   ),
                 ),
                 accountEmail: Text(
-                  customerProvider.currentCustomer?.email ?? 'guest@example.com',
+                  customerProvider.currentCustomer?.email ??
+                      'guest@example.com',
                   style: const TextStyle(fontSize: 14),
                 ),
                 currentAccountPicture: CircleAvatar(
                   backgroundColor: Colors.white,
                   child: Text(
-                    customerProvider.currentCustomer?.fullName.isNotEmpty == true
-                        ? customerProvider.currentCustomer!.fullName[0].toUpperCase()
+                    customerProvider.currentCustomer?.fullName.isNotEmpty ==
+                            true
+                        ? customerProvider.currentCustomer!.fullName[0]
+                              .toUpperCase()
                         : 'G',
                     style: const TextStyle(
                       fontSize: 24,
@@ -75,8 +76,8 @@ class PersistentDrawer extends StatelessWidget {
                   context,
                   icon: Icons.book_online,
                   title: 'Book Service',
-                  route: RouteNames.booking,
-                  isSelected: _isCurrentRoute(context, RouteNames.booking),
+                  route: RouteNames.searchShops,
+                  isSelected: _isCurrentRoute(context, RouteNames.searchShops),
                 ),
 
                 // Search Shops
@@ -140,7 +141,9 @@ class PersistentDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     // TODO: Navigate to help
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Help & Support coming soon!')),
+                      const SnackBar(
+                        content: Text('Help & Support coming soon!'),
+                      ),
                     );
                   },
                 ),
@@ -166,17 +169,11 @@ class PersistentDrawer extends StatelessWidget {
               children: [
                 Text(
                   'WMS Customer App',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 Text(
                   'Version 1.0.0',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
             ),
@@ -196,10 +193,7 @@ class PersistentDrawer extends StatelessWidget {
     Color? textColor,
   }) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? const Color(0xFFCF2049) : null,
-      ),
+      leading: Icon(icon, color: isSelected ? const Color(0xFFCF2049) : null),
       title: Text(
         title,
         style: TextStyle(

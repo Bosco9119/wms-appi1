@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../modules/customer/screens/customer_home_screen.dart';
-import '../../modules/schedule/screens/schedule_screen.dart';
+import '../../modules/customer/screens/schedule_screen.dart';
 import '../../modules/billing/screens/billing_screen.dart';
 import '../../modules/e_wallet/screens/wallet_screen.dart';
 import '../../modules/feedback/screens/feedback_screen.dart';
@@ -97,12 +97,18 @@ class AppRouter {
 
           // Service Booking Routes
           GoRoute(
-            path: '/booking',
+            path: '/booking/:shopId/:shopName',
             name: 'booking',
-            builder: (context, state) => const PersistentPage(
-              title: 'Book Service',
-              child: ServiceBookingScreen(),
-            ),
+            builder: (context, state) {
+              final shopId = state.pathParameters['shopId']!;
+              final shopName = Uri.decodeComponent(
+                state.pathParameters['shopName']!,
+              );
+              return PersistentPage(
+                title: 'Book Service',
+                child: ServiceBookingScreen(shopId: shopId, shopName: shopName),
+              );
+            },
           ),
           GoRoute(
             path: '/search-shops',

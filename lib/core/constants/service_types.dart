@@ -1,0 +1,248 @@
+import '../../shared/models/service_type_model.dart';
+
+class ServiceTypes {
+  static const List<ServiceType> _serviceTypes = [
+    ServiceType(
+      name: 'Oil Change',
+      duration: 30,
+      baseCost: 50.00,
+      description: 'Regular engine oil change and filter replacement',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'Brake Check',
+      duration: 60,
+      baseCost: 80.00,
+      description: 'Complete brake system inspection and adjustment',
+      category: 'Safety',
+    ),
+    ServiceType(
+      name: 'Tire Rotation',
+      duration: 30,
+      baseCost: 40.00,
+      description: 'Rotate tires for even wear and extend tire life',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'Engine Diagnostic',
+      duration: 90,
+      baseCost: 120.00,
+      description: 'Computer diagnostic scan and engine health check',
+      category: 'Diagnostic',
+    ),
+    ServiceType(
+      name: 'Transmission Service',
+      duration: 120,
+      baseCost: 200.00,
+      description: 'Transmission fluid change and system service',
+      category: 'Major Service',
+    ),
+    ServiceType(
+      name: 'Battery Check',
+      duration: 30,
+      baseCost: 30.00,
+      description: 'Battery health test and terminal cleaning',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'Air Filter Replacement',
+      duration: 30,
+      baseCost: 35.00,
+      description: 'Replace engine air filter for better performance',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'Spark Plug Replacement',
+      duration: 60,
+      baseCost: 90.00,
+      description: 'Replace spark plugs for optimal engine performance',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'Coolant Flush',
+      duration: 60,
+      baseCost: 75.00,
+      description: 'Drain and replace engine coolant system',
+      category: 'Maintenance',
+    ),
+    ServiceType(
+      name: 'AC System Check',
+      duration: 45,
+      baseCost: 60.00,
+      description: 'Air conditioning system inspection and service',
+      category: 'Comfort',
+    ),
+    ServiceType(
+      name: 'Wheel Alignment',
+      duration: 60,
+      baseCost: 85.00,
+      description: 'Adjust wheel angles for proper tire wear',
+      category: 'Safety',
+    ),
+    ServiceType(
+      name: 'Exhaust System Check',
+      duration: 45,
+      baseCost: 55.00,
+      description: 'Inspect exhaust system for leaks and damage',
+      category: 'Safety',
+    ),
+  ];
+
+  static List<ServiceType> get all => _serviceTypes;
+
+  static List<ServiceType> getByCategory(String category) {
+    return _serviceTypes
+        .where((service) => service.category == category)
+        .toList();
+  }
+
+  static List<String> get categories {
+    return _serviceTypes.map((service) => service.category).toSet().toList();
+  }
+
+  static ServiceType? getByName(String name) {
+    try {
+      return _serviceTypes.firstWhere((service) => service.name == name);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static int calculateTotalDuration(List<String> serviceNames) {
+    int totalDuration = 0;
+    for (String serviceName in serviceNames) {
+      final service = getByName(serviceName);
+      if (service != null) {
+        totalDuration += service.duration;
+      }
+    }
+    return totalDuration;
+  }
+
+  static double calculateTotalCost(List<String> serviceNames) {
+    double totalCost = 0.0;
+    for (String serviceName in serviceNames) {
+      final service = getByName(serviceName);
+      if (service != null) {
+        totalCost += service.baseCost;
+      }
+    }
+    return totalCost;
+  }
+
+  static List<String> generateTimeSlots(String startTime, int duration) {
+    final slots = <String>[];
+    final start = _timeToMinutes(startTime);
+
+    for (int i = start; i < start + duration; i += 30) {
+      // 30-minute intervals
+      final hour = i ~/ 60;
+      final minute = i % 60;
+      final time =
+          '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      final nextTime =
+          '${((i + 30) ~/ 60).toString().padLeft(2, '0')}:${((i + 30) % 60).toString().padLeft(2, '0')}';
+      slots.add('$time-$nextTime');
+    }
+
+    return slots;
+  }
+
+  static int _timeToMinutes(String time) {
+    try {
+      final parts = time.split(':');
+      if (parts.length >= 2) {
+        return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      }
+    } catch (e) {
+      print('Error parsing time to minutes in ServiceTypes: $e');
+    }
+    return 0;
+  }
+
+  // Working hours configuration
+  static const Map<String, dynamic> workingHours = {
+    'monday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'tuesday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'wednesday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'thursday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'friday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'saturday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
+    'sunday': {'start': '10:00', 'end': '12:00', 'isOpen': false},
+    'afternoonStart': '13:00',
+    'afternoonEnd': '16:00',
+    'timeSlotDuration': 30,
+    'breakTime': 0,
+  };
+
+  // Generate all available time slots for a given day
+  static List<String> generateAllTimeSlots() {
+    final slots = <String>[];
+
+    // Morning slots (10:00-12:00)
+    for (int hour = 10; hour < 12; hour++) {
+      for (int minute = 0; minute < 60; minute += 30) {
+        final time =
+            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+        final nextMinute = minute + 30;
+        final nextHour = nextMinute >= 60 ? hour + 1 : hour;
+        final nextMinuteAdjusted = nextMinute >= 60
+            ? nextMinute - 60
+            : nextMinute;
+        final nextTime =
+            '${nextHour.toString().padLeft(2, '0')}:${nextMinuteAdjusted.toString().padLeft(2, '0')}';
+        slots.add('$time-$nextTime');
+      }
+    }
+
+    // Afternoon slots (13:00-16:00)
+    for (int hour = 13; hour < 16; hour++) {
+      for (int minute = 0; minute < 60; minute += 30) {
+        final time =
+            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+        final nextMinute = minute + 30;
+        final nextHour = nextMinute >= 60 ? hour + 1 : hour;
+        final nextMinuteAdjusted = nextMinute >= 60
+            ? nextMinute - 60
+            : nextMinute;
+        final nextTime =
+            '${nextHour.toString().padLeft(2, '0')}:${nextMinuteAdjusted.toString().padLeft(2, '0')}';
+        slots.add('$time-$nextTime');
+      }
+    }
+
+    return slots;
+  }
+
+  // Check if a date is valid for booking (not Sunday, not more than 1 month ahead)
+  static bool isValidBookingDate(DateTime date) {
+    final now = DateTime.now();
+    final oneMonthFromNow = DateTime(now.year, now.month + 1, now.day);
+
+    // Check if date is not Sunday (weekday 7)
+    if (date.weekday == 7) return false;
+
+    // Check if date is not more than 1 month ahead
+    if (date.isAfter(oneMonthFromNow)) return false;
+
+    // Check if date is not in the past
+    if (date.isBefore(DateTime(now.year, now.month, now.day))) return false;
+
+    return true;
+  }
+
+  // Get available dates for booking (next 30 days, excluding Sundays)
+  static List<DateTime> getAvailableDates() {
+    final dates = <DateTime>[];
+    final now = DateTime.now();
+
+    for (int i = 0; i < 30; i++) {
+      final date = DateTime(now.year, now.month, now.day + i);
+      if (isValidBookingDate(date)) {
+        dates.add(date);
+      }
+    }
+
+    return dates;
+  }
+}
