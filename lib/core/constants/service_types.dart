@@ -211,6 +211,13 @@ class ServiceTypes {
       }
     }
 
+    // Sort slots chronologically
+    slots.sort((a, b) {
+      final aStart = a.split('-')[0];
+      final bStart = b.split('-')[0];
+      return _timeToMinutes(aStart).compareTo(_timeToMinutes(bStart));
+    });
+
     return slots;
   }
 
@@ -229,6 +236,40 @@ class ServiceTypes {
     if (date.isBefore(DateTime(now.year, now.month, now.day))) return false;
 
     return true;
+  }
+
+  // Check if a time slot is in the past
+  static bool isTimeSlotInPast(String timeSlot, DateTime date) {
+    final now = DateTime.now();
+    final timeParts = timeSlot.split('-')[0].split(':');
+    
+    if (timeParts.length < 2) return true;
+    
+    final slotTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+    
+    return slotTime.isBefore(now);
+  }
+
+  // Get available time slots for a specific date, filtering out past slots
+  static List<String> getAvailableTimeSlotsForDate(DateTime date) {
+    if (!isValidBookingDate(date)) return [];
+    
+    final allSlots = generateAllTimeSlots();
+    final now = DateTime.now();
+    
+    // If it's today, filter out past time slots
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return allSlots.where((slot) => !isTimeSlotInPast(slot, date)).toList();
+    }
+    
+    // For future dates, return all slots
+    return allSlots;
   }
 
   // Get available dates for booking (next 30 days, excluding Sundays)

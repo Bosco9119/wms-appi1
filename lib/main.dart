@@ -27,7 +27,11 @@ class WMSApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => CustomerProvider())],
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => CustomerProvider()..loadCustomerData(),
+        ),
+      ],
       child: MaterialApp.router(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
@@ -144,11 +148,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          // User is logged in, load their data and show main app
+          // User is logged in, show main app
           print('✅ AuthWrapper: User is authenticated: ${snapshot.data!.uid}');
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.read<CustomerProvider>().loadCustomerData();
-          });
+          print('📱 User email: ${snapshot.data!.email}');
+          print('📱 User display name: ${snapshot.data!.displayName}');
+          print('📱 User phone: ${snapshot.data!.phoneNumber}');
           return const WMSApp();
         } else {
           // User is not logged in, show login app

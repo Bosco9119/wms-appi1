@@ -33,6 +33,19 @@ class BookingService {
       throw Exception('User not authenticated');
     }
 
+    // Validate date and time
+    final bookingDate = DateTime.parse(date);
+    if (!ServiceTypes.isValidBookingDate(bookingDate)) {
+      throw Exception('Invalid booking date');
+    }
+
+    // Check if time slot is in the past
+    final timeSlot =
+        '${startTime}-${ServiceTypes.generateTimeSlots(startTime, ServiceTypes.calculateTotalDuration(serviceTypes)).last.split('-')[1]}';
+    if (ServiceTypes.isTimeSlotInPast(timeSlot, bookingDate)) {
+      throw Exception('Cannot book time slots in the past');
+    }
+
     // Calculate total duration and cost
     final totalDuration = ServiceTypes.calculateTotalDuration(serviceTypes);
     final estimatedCost = ServiceTypes.calculateTotalCost(serviceTypes);
@@ -42,7 +55,40 @@ class BookingService {
       startTime,
       totalDuration,
     );
-    final timeSlot = '${startTime}-${requiredSlots.last.split('-')[1]}';
+
+    // Check for existing bookings by the same user for the same time slot
+    try {
+      final existingBookingQuery = await _bookingsRef
+          .where('userId', isEqualTo: _currentUserId!)
+          .where('shopId', isEqualTo: shopId)
+          .where('date', isEqualTo: date)
+          .where('status', isEqualTo: 'confirmed')
+          .limit(1)
+          .get();
+
+      if (existingBookingQuery.docs.isNotEmpty) {
+        final existingBooking = Booking.fromMap(
+          existingBookingQuery.docs.first.data() as Map<String, dynamic>,
+        );
+
+        // Check if the existing booking overlaps with the requested time
+        final existingSlots = ServiceTypes.generateTimeSlots(
+          existingBooking.timeSlot.split('-')[0],
+          existingBooking.totalDuration,
+        );
+
+        for (String slot in requiredSlots) {
+          if (existingSlots.contains(slot)) {
+            throw Exception('You already have a booking at this time slot');
+          }
+        }
+      }
+    } catch (e) {
+      if (e.toString().contains('already have a booking')) {
+        rethrow;
+      }
+      print('⚠️ Warning: Could not check for existing bookings: $e');
+    }
 
     try {
       // Use transaction to prevent double booking
@@ -78,7 +124,11 @@ class BookingService {
           }
         }
 
-        // 3. Get shop and customer details
+        // 3. Check for existing bookings by the same user for the same time slot
+        // Note: We can't use complex queries in transactions, so we'll check before the transaction
+        // This is handled in the bookAppointment method before calling the transaction
+
+        // 4. Get shop and customer details
         final shopDoc = await transaction.get(_shopsRef.doc(shopId));
         if (!shopDoc.exists) {
           throw Exception('Shop not found');
@@ -94,7 +144,7 @@ class BookingService {
 
         final customerData = customerDoc.data() as Map<String, dynamic>;
 
-        // 4. Create booking
+        // 5. Create booking
         final bookingRef = _bookingsRef.doc();
         final booking = Booking(
           id: bookingRef.id,
@@ -118,7 +168,7 @@ class BookingService {
           customerEmail: customerData['email'] ?? '',
         );
 
-        // 5. Update availability - mark slots as booked
+        // 6. Update availability - mark slots as booked
         final updatedTimeSlots = availability.timeSlots.map(
           (key, value) => MapEntry(key, value.toMap()),
         );
@@ -130,7 +180,7 @@ class BookingService {
           };
         }
 
-        // 6. Execute transaction
+        // 7. Execute transaction
         transaction.set(bookingRef, booking.toMap());
         transaction.update(availabilityRef, {
           'timeSlots': updatedTimeSlots,
@@ -397,5 +447,110 @@ class BookingService {
       print('❌ BookingService Error: $e');
       rethrow;
     }
+  }
+
+  /// Update booking statuses automatically (mark past appointments as completed)
+  Future<void> updateBookingStatuses() async {
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      // Get all confirmed bookings that should be completed
+      final querySnapshot = await _bookingsRef
+          .where('status', isEqualTo: 'confirmed')
+          .get();
+
+      final batch = _firestore.batch();
+      int updateCount = 0;
+
+      for (final doc in querySnapshot.docs) {
+        final booking = Booking.fromMap(doc.data() as Map<String, dynamic>);
+        final bookingDate = DateTime.parse(booking.date);
+
+        // Check if booking is in the past
+        if (bookingDate.isBefore(today)) {
+          // Mark as completed
+          batch.update(doc.reference, {
+            'status': 'completed',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          updateCount++;
+        } else if (bookingDate.isAtSameMomentAs(today)) {
+          // Check if time slot has passed
+          final timeParts = booking.timeSlot.split('-')[0].split(':');
+          final bookingTime = DateTime(
+            bookingDate.year,
+            bookingDate.month,
+            bookingDate.day,
+            int.parse(timeParts[0]),
+            int.parse(timeParts[1]),
+          );
+
+          if (bookingTime.isBefore(now)) {
+            batch.update(doc.reference, {
+              'status': 'completed',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+            updateCount++;
+          }
+        }
+      }
+
+      if (updateCount > 0) {
+        await batch.commit();
+        print('✅ Updated $updateCount booking statuses to completed');
+      }
+    } catch (e) {
+      print('❌ Error updating booking statuses: $e');
+    }
+  }
+
+  /// Get available time slots for a shop and date with proper filtering
+  Future<List<String>> getAvailableTimeSlotsForBooking(
+    String shopId,
+    String date,
+  ) async {
+    try {
+      // First update any past booking statuses
+      await updateBookingStatuses();
+
+      final availability = await getShopAvailability(shopId, date);
+      if (availability == null) return [];
+
+      final bookingDate = DateTime.parse(date);
+      final availableSlots = <String>[];
+
+      for (final slot in availability.availableSlots) {
+        // Check if slot is not in the past
+        if (!ServiceTypes.isTimeSlotInPast(slot.time, bookingDate)) {
+          availableSlots.add(slot.time);
+        }
+      }
+
+      // Sort chronologically
+      availableSlots.sort((a, b) {
+        final aStart = a.split('-')[0];
+        final bStart = b.split('-')[0];
+        return _timeToMinutes(aStart).compareTo(_timeToMinutes(bStart));
+      });
+
+      return availableSlots;
+    } catch (e) {
+      print('❌ Error getting available time slots: $e');
+      return [];
+    }
+  }
+
+  // Helper method to convert time string to minutes
+  int _timeToMinutes(String time) {
+    try {
+      final parts = time.split(':');
+      if (parts.length >= 2) {
+        return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      }
+    } catch (e) {
+      print('Error parsing time to minutes: $e');
+    }
+    return 0;
   }
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/services/booking_service.dart';
 import '../../../core/constants/service_types.dart';
 import '../../../shared/models/shop_availability_model.dart';
+import '../../../shared/models/time_slot_model.dart';
 import '../../../core/navigation/route_names.dart';
 import '../widgets/multi_service_selector.dart';
 import '../widgets/booking_calendar.dart';
@@ -48,17 +49,32 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     });
 
     try {
-      final availability = await _bookingService.getShopAvailability(
+      // Use the new improved method that filters past slots and sorts chronologically
+      final availableSlots = await _bookingService.getAvailableTimeSlotsForBooking(
         widget.shopId,
         _formatDate(_selectedDate),
       );
 
-      print(
-        '🔍 Shop Availability loaded: ${availability?.availableSlots.length} slots',
+      print('🔍 Available time slots loaded: ${availableSlots.length} slots');
+      print('🔍 Available slots: $availableSlots');
+
+      // Create a mock availability object for compatibility
+      final availability = ShopAvailability(
+        shopId: widget.shopId,
+        date: _formatDate(_selectedDate),
+        timeSlots: {},
+        lastUpdated: DateTime.now(),
       );
-      print(
-        '🔍 Available slots: ${availability?.availableSlots.map((s) => s.time).toList()}',
-      );
+
+      // Convert string slots to TimeSlot objects
+      for (String slot in availableSlots) {
+        availability.timeSlots[slot] = TimeSlot(
+          time: slot,
+          isAvailable: true,
+          bookingId: null,
+          serviceTypes: null,
+        );
+      }
 
       setState(() {
         _shopAvailability = availability;

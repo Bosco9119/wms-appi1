@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Customer {
   final String id;
   final String email;
@@ -47,20 +49,25 @@ class Customer {
 
   // JSON serialization for local storage
   String toJson() {
-    return toMap().toString();
+    return jsonEncode(toMap());
   }
 
   factory Customer.fromJson(String json) {
-    // For now, use a simple approach - in production, use dart:convert
-    // This is a placeholder implementation
-    return Customer(
-      id: '',
-      email: '',
-      fullName: '',
-      phoneNumber: '',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      final Map<String, dynamic> map = jsonDecode(json);
+      return Customer.fromMap(map);
+    } catch (e) {
+      print('❌ Customer.fromJson Error: $e');
+      // Return a default customer if parsing fails
+      return Customer(
+        id: '',
+        email: '',
+        fullName: '',
+        phoneNumber: '',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
   }
 
   Customer copyWith({

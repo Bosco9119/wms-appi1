@@ -99,21 +99,41 @@ class PersistentAuthService {
   /// Get customer data with local backup
   Future<Customer?> getCurrentCustomer() async {
     try {
+      print('🔄 PersistentAuth: Getting current customer...');
+
       // First try Firebase
       final User? user = _auth.currentUser;
+      print('📱 PersistentAuth: Firebase user: ${user?.uid}');
+
       if (user != null) {
         final Customer? customer = await _getCustomerFromFirebase(user.uid);
         if (customer != null) {
+          print('✅ PersistentAuth: Customer found in Firebase, saving locally');
           await _saveCustomerData(customer);
           return customer;
+        } else {
+          print(
+            '❌ PersistentAuth: No customer found in Firebase for UID: ${user.uid}',
+          );
         }
+      } else {
+        print('❌ PersistentAuth: No Firebase user found');
       }
 
       // If no Firebase user or customer, try local storage
+      print('🔄 PersistentAuth: Trying local storage...');
       final Customer? localCustomer = await _getCustomerFromLocal();
       if (localCustomer != null) {
         print('✅ PersistentAuth: Customer data restored from local storage');
+        print(
+          '📱 PersistentAuth: Local customer name: ${localCustomer.fullName}',
+        );
+        print(
+          '📱 PersistentAuth: Local customer email: ${localCustomer.email}',
+        );
         return localCustomer;
+      } else {
+        print('❌ PersistentAuth: No customer data found in local storage');
       }
 
       return null;
@@ -180,14 +200,28 @@ class PersistentAuthService {
   /// Get customer data from Firebase
   Future<Customer?> _getCustomerFromFirebase(String uid) async {
     try {
+      print(
+        '🔥 PersistentAuth: Fetching customer data from Firebase for UID: $uid',
+      );
       final DocumentSnapshot doc = await _firestore
           .collection('customers')
           .doc(uid)
           .get();
 
-      if (!doc.exists) return null;
+      if (!doc.exists) {
+        print('❌ PersistentAuth: Customer document not found in Firestore');
+        return null;
+      }
 
-      return Customer.fromMap(doc.data() as Map<String, dynamic>);
+      final customerData = doc.data() as Map<String, dynamic>;
+      print(
+        '✅ PersistentAuth: Customer data found in Firestore: $customerData',
+      );
+      final customer = Customer.fromMap(customerData);
+      print(
+        '📱 PersistentAuth: Customer phone number: ${customer.phoneNumber}',
+      );
+      return customer;
     } catch (e) {
       print('❌ PersistentAuth: Error getting customer from Firebase: $e');
       return null;

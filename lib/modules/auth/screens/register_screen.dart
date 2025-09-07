@@ -45,7 +45,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      context.go(RouteNames.home);
+      // Registration successful - AuthWrapper will automatically redirect to WMSApp
+      print(
+        '✅ RegisterScreen: Registration successful, AuthWrapper will handle redirect',
+      );
+      // No need to navigate manually - AuthWrapper will detect auth state change
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
