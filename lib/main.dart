@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'core/navigation/app_router.dart';
 import 'core/navigation/login_router.dart';
 import 'core/services/persistent_auth_service.dart';
+import 'core/services/notification_service.dart';
 import 'shared/providers/customer_provider.dart';
 import 'core/constants/app_constants.dart';
 
@@ -15,14 +16,40 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Initialize Notification Service
+  print('🔔 Initializing notification service...');
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  print('🔔 Requesting notification permissions...');
+  final permissionGranted = await notificationService.requestPermissions();
+
+  print('🔔 Checking exact alarm permissions...');
+  final exactAlarmGranted = await notificationService
+      .requestExactAlarmPermission();
+
+  notificationService.setupNotificationListeners();
+
   print('🔥 Firebase initialized successfully!');
   print('📱 Project ID: ${Firebase.app().options.projectId}');
+  print('🔔 Notification service initialized!');
+  print('🔔 Notification permissions granted: $permissionGranted');
+  print('⏰ Exact alarm permissions granted: $exactAlarmGranted');
+
+  // Test notification to verify it's working
+  if (permissionGranted) {
+    await notificationService.showImmediateNotification(
+      title: 'AutoAnywhere App Started',
+      body: 'Notification system is working!',
+      payload: 'app_start',
+    );
+  }
 
   runApp(const AuthWrapper());
 }
 
-class WMSApp extends StatelessWidget {
-  const WMSApp({super.key});
+class AutoAnywhereApp extends StatelessWidget {
+  const AutoAnywhereApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +180,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           print('📱 User email: ${snapshot.data!.email}');
           print('📱 User display name: ${snapshot.data!.displayName}');
           print('📱 User phone: ${snapshot.data!.phoneNumber}');
-          return const WMSApp();
+          return const AutoAnywhereApp();
         } else {
           // User is not logged in, show login app
           print('❌ AuthWrapper: User is not logged in, redirecting to login');
@@ -245,17 +272,19 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.build_circle,
-                color: const Color(0xFFCF2049),
-                size: 60,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Image.asset(
+                  'assets/AutoAnywhere@logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
             // App Name
             const Text(
-              'WMS App',
+              'AutoAnywhere',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -264,7 +293,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Workshop Management System',
+              'Automotive Service Management',
               style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
             const SizedBox(height: 48),

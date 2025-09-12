@@ -42,6 +42,17 @@ class ShopService {
     }
   }
 
+  /// Get services offered by a specific shop
+  Future<List<String>> getShopServices(String shopId) async {
+    try {
+      final Shop? shop = await getShopById(shopId);
+      return shop?.services ?? [];
+    } catch (e) {
+      print('❌ ShopService: Error getting shop services: $e');
+      return [];
+    }
+  }
+
   /// Search shops by name or service
   Future<List<Shop>> searchShops(String query) async {
     try {

@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/persistent_auth_service.dart';
+import '../../core/services/booking_service.dart';
+import '../../core/services/shop_service.dart';
 import '../models/customer_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/appointment_model.dart';
+import '../models/booking_model.dart';
+import '../models/shop_model.dart';
 
 class CustomerProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final PersistentAuthService _persistentAuth = PersistentAuthService();
+  final BookingService _bookingService = BookingService();
+  final ShopService _shopService = ShopService();
 
   // State variables
   Customer? _currentCustomer;
   List<Vehicle> _vehicles = [];
   List<Appointment> _appointments = [];
-  List<Map<String, dynamic>> _lastVisitedShops = [];
-  List<Map<String, dynamic>> _nearbyShops = [];
+  List<Booking> _confirmedBookings = [];
+  List<Shop> _availableShops = [];
   bool _isLoading = false;
   String? _error;
   bool _disposed = false;
@@ -23,8 +29,8 @@ class CustomerProvider with ChangeNotifier {
   Customer? get currentCustomer => _currentCustomer;
   List<Vehicle> get vehicles => _vehicles;
   List<Appointment> get appointments => _appointments;
-  List<Map<String, dynamic>> get lastVisitedShops => _lastVisitedShops;
-  List<Map<String, dynamic>> get nearbyShops => _nearbyShops;
+  List<Booking> get confirmedBookings => _confirmedBookings;
+  List<Shop> get availableShops => _availableShops;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _currentCustomer != null;
@@ -66,8 +72,8 @@ class CustomerProvider with ChangeNotifier {
         );
         await _loadVehicles();
         await _loadAppointments();
-        await _loadLastVisitedShops();
-        await _loadNearbyShops();
+        await _loadCompletedBookings();
+        await _loadAvailableShops();
 
         // Notify listeners that customer data has been loaded
         print(
@@ -136,8 +142,8 @@ class CustomerProvider with ChangeNotifier {
         // Load related data from Firebase
         await _loadVehicles();
         await _loadAppointments();
-        await _loadLastVisitedShops();
-        await _loadNearbyShops();
+        await _loadCompletedBookings();
+        await _loadAvailableShops();
 
         _setLoading(false);
         _safeNotifyListeners();
@@ -187,8 +193,8 @@ class CustomerProvider with ChangeNotifier {
       // Load related data
       await _loadVehicles();
       await _loadAppointments();
-      await _loadLastVisitedShops();
-      await _loadNearbyShops();
+      await _loadCompletedBookings();
+      await _loadAvailableShops();
 
       _setLoading(false);
       _safeNotifyListeners();
@@ -214,8 +220,8 @@ class CustomerProvider with ChangeNotifier {
       _currentCustomer = null;
       _vehicles.clear();
       _appointments.clear();
-      _lastVisitedShops.clear();
-      _nearbyShops.clear();
+      _confirmedBookings.clear();
+      _availableShops.clear();
 
       _setLoading(false);
       _safeNotifyListeners();
@@ -274,16 +280,48 @@ class CustomerProvider with ChangeNotifier {
     _appointments = [];
   }
 
-  /// Load last visited shops (placeholder - would load from Firebase)
-  Future<void> _loadLastVisitedShops() async {
-    // TODO: Implement Firebase last visited shops loading
-    _lastVisitedShops = [];
+  /// Load completed bookings for last visited shops
+  Future<void> _loadCompletedBookings() async {
+    try {
+      if (_currentCustomer == null) return;
+
+      print('🔄 CustomerProvider: Loading completed bookings...');
+
+      // Get all bookings for the user
+      final allBookings = await _bookingService.getUserBookings();
+
+      // Filter only completed bookings
+      _confirmedBookings = allBookings
+          .where((booking) => booking.status == BookingStatus.completed)
+          .toList();
+
+      // Sort by booking date (most recent first)
+      _confirmedBookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      print(
+        '✅ CustomerProvider: Loaded ${_confirmedBookings.length} completed bookings',
+      );
+    } catch (e) {
+      print('❌ CustomerProvider: Error loading completed bookings: $e');
+      _confirmedBookings = [];
+    }
   }
 
-  /// Load nearby shops (placeholder - would load from Firebase)
-  Future<void> _loadNearbyShops() async {
-    // TODO: Implement Firebase nearby shops loading
-    _nearbyShops = [];
+  /// Load available shops from system
+  Future<void> _loadAvailableShops() async {
+    try {
+      print('🔄 CustomerProvider: Loading available shops...');
+
+      // Get all available shops from the system
+      _availableShops = await _shopService.getAllShops();
+
+      print(
+        '✅ CustomerProvider: Loaded ${_availableShops.length} available shops',
+      );
+    } catch (e) {
+      print('❌ CustomerProvider: Error loading available shops: $e');
+      _availableShops = [];
+    }
   }
 
   /// Add vehicle

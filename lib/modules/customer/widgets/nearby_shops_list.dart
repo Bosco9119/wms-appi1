@@ -17,15 +17,14 @@ class NearbyShopsList extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final nearbyShops = customerProvider.nearbyShops
+        final availableShops = customerProvider.availableShops
             .where(
               (shop) =>
-                  serviceType == 'All' ||
-                  shop['services']?.contains(serviceType) == true,
+                  serviceType == 'All' || shop.services.contains(serviceType),
             )
             .toList();
 
-        if (nearbyShops.isEmpty) {
+        if (availableShops.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -37,7 +36,7 @@ class NearbyShopsList extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No nearby shops found',
+                  'No available shops found',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -46,7 +45,7 @@ class NearbyShopsList extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Try searching for workshops in your area',
+                  'No shops available for the selected service type',
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   textAlign: TextAlign.center,
                 ),
@@ -57,14 +56,14 @@ class NearbyShopsList extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: nearbyShops.length,
+          itemCount: availableShops.length,
           itemBuilder: (context, index) {
-            final shop = nearbyShops[index];
+            final shop = availableShops[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GestureDetector(
                 onTap: () {
-                  context.go(RouteNames.shopDetailsRoute(shop['id']));
+                  context.go(RouteNames.shopDetailsRoute(shop.id));
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -82,7 +81,7 @@ class NearbyShopsList extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              shop['name'] ?? 'Unknown Shop',
+                              shop.name,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -98,18 +97,22 @@ class NearbyShopsList extends StatelessWidget {
                                   color: Colors.grey[600],
                                 ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  shop['distance'] ?? 'Unknown Distance',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
+                                Expanded(
+                                  child: Text(
+                                    shop.address,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 8),
                                 Row(
                                   children: List.generate(5, (starIndex) {
                                     return Icon(
-                                      starIndex < (shop['rating'] ?? 0)
+                                      starIndex < shop.rating
                                           ? Icons.star
                                           : Icons.star_border,
                                       size: 14,
@@ -119,14 +122,34 @@ class NearbyShopsList extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            if (shop['services'] != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Services: ${shop.services.join(', ')}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                            if (shop.phoneNumber.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(
-                                'Services: ${shop['services']}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.phone,
+                                    size: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    shop.phoneNumber,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ],

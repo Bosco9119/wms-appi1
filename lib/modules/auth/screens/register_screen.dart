@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      // Registration successful - AuthWrapper will automatically redirect to WMSApp
+      // Registration successful - AuthWrapper will automatically redirect to AutoAnywhereApp
       print(
         '✅ RegisterScreen: Registration successful, AuthWrapper will handle redirect',
       );

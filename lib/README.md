@@ -1,6 +1,6 @@
-# WMS Customer Mobile App
+# AutoAnywhere Mobile App
 
-A Flutter mobile application for Greenstem Workshop Management System (WMS) customers.
+A Flutter mobile application for AutoAnywhere Workshop Management System customers.
 
 ## Project Structure
 

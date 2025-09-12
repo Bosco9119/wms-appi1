@@ -5,20 +5,14 @@ class ShopCard extends StatelessWidget {
   final Shop shop;
   final VoidCallback? onTap;
 
-  const ShopCard({
-    super.key,
-    required this.shop,
-    this.onTap,
-  });
+  const ShopCard({super.key, required this.shop, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -60,9 +54,9 @@ class ShopCard extends StatelessWidget {
                         ),
                       ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Shop Name
               Text(
                 shop.name,
@@ -72,9 +66,9 @@ class ShopCard extends StatelessWidget {
                   color: const Color(0xFFCF2049),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Rating and Review Count
               Row(
                 children: [
@@ -90,16 +84,18 @@ class ShopCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     '(${shop.reviewCount} reviews)',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: shop.isOpen ? Colors.green : const Color(0xFFCF2049),
+                      color: shop.isOpen
+                          ? Colors.green
+                          : const Color(0xFFCF2049),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -113,57 +109,80 @@ class ShopCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Description
               Text(
                 shop.description,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey[700], fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Services Overview
-              if (shop.serviceCounts.isNotEmpty) ...[
+              if (shop.services.isNotEmpty) ...[
                 const Text(
-                  'Services:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  'Available Services:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
-                  spacing: 8,
+                  spacing: 6,
                   runSpacing: 4,
-                  children: shop.serviceCounts.entries.map((entry) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCF2049).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFCF2049).withOpacity(0.3)),
+                  children:
+                      shop.services.take(4).map((serviceName) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCF2049).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFCF2049).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            serviceName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: const Color(0xFFCF2049),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }).toList()..addAll(
+                        shop.services.length > 4
+                            ? [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '+${shop.services.length - 4} more',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : [],
                       ),
-                      child: Text(
-                        '${entry.key}: ${entry.value}+',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: const Color(0xFFCF2049),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    );
-                  }).toList(),
                 ),
                 const SizedBox(height: 12),
               ],
-              
+
               // Address and Phone
               Row(
                 children: [
@@ -172,42 +191,33 @@ class ShopCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       shop.address,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 4),
-              
+
               Row(
                 children: [
                   Icon(Icons.phone, size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text(
                     shop.phoneNumber,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Operating Hours
               Text(
                 shop.operatingHours,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ],
           ),

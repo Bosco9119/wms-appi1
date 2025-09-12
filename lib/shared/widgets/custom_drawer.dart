@@ -47,7 +47,7 @@ class CustomDrawer extends StatelessWidget {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'WMS Customer',
+                            'AutoAnywhere Customer',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,

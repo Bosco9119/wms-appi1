@@ -1,5 +1,5 @@
-name: wms_app
-description: "A new Flutter project."
+name: auto_anywhere_app
+description: "AutoAnywhere - Workshop Management System"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -55,8 +55,9 @@ dependencies:
   intl: ^0.19.0
   table_calendar: ^3.0.9
   
-  # Notifications (commented out for now)
-  # flutter_local_notifications: ^16.3.2
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.2
   
   # Payment Integration (commented out - will add later)
   # stripe_payment: ^1.1.4
@@ -87,6 +88,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
+  # App icon generator
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -100,9 +104,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/AutoAnywhere@logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -129,3 +132,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/AutoAnywhere@logo.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/AutoAnywhere@logo.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/AutoAnywhere@logo.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/AutoAnywhere@logo.png"

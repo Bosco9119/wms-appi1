@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/booking_service.dart';
+import '../../../core/services/shop_service.dart';
 import '../../../core/constants/service_types.dart';
 import '../../../shared/models/shop_availability_model.dart';
 import '../../../shared/models/time_slot_model.dart';
@@ -25,6 +26,7 @@ class ServiceBookingScreen extends StatefulWidget {
 
 class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
   final BookingService _bookingService = BookingService();
+  final ShopService _shopService = ShopService();
 
   DateTime _selectedDate = DateTime.now();
   String? _selectedStartTime;
@@ -35,11 +37,13 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   ShopAvailability? _shopAvailability;
+  List<String> _availableServices = [];
 
   @override
   void initState() {
     super.initState();
     _loadShopAvailability();
+    _loadShopServices();
   }
 
   Future<void> _loadShopAvailability() async {
@@ -50,10 +54,11 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
 
     try {
       // Use the new improved method that filters past slots and sorts chronologically
-      final availableSlots = await _bookingService.getAvailableTimeSlotsForBooking(
-        widget.shopId,
-        _formatDate(_selectedDate),
-      );
+      final availableSlots = await _bookingService
+          .getAvailableTimeSlotsForBooking(
+            widget.shopId,
+            _formatDate(_selectedDate),
+          );
 
       print('🔍 Available time slots loaded: ${availableSlots.length} slots');
       print('🔍 Available slots: $availableSlots');
@@ -89,6 +94,21 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     }
   }
 
+  Future<void> _loadShopServices() async {
+    try {
+      final services = await _shopService.getShopServices(widget.shopId);
+      setState(() {
+        _availableServices = services;
+      });
+      print('✅ Loaded shop services: $services');
+    } catch (e) {
+      print('❌ Error loading shop services: $e');
+      setState(() {
+        _availableServices = [];
+      });
+    }
+  }
+
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
@@ -117,6 +137,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
       );
 
       if (booking != null && mounted) {
+        // Show snackbar for immediate feedback
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Appointment booked successfully!'),
@@ -197,6 +218,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
             const SizedBox(height: 16),
             MultiServiceSelector(
               selectedServices: _selectedServices,
+              availableServices: _availableServices,
               onServicesChanged: (services) {
                 setState(() {
                   _selectedServices = services;

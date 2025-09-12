@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/customer_provider.dart';
 import 'persistent_drawer.dart';
 
@@ -24,7 +25,7 @@ class PersistentLayout extends StatelessWidget {
     return Scaffold(
       appBar: showAppBar
           ? AppBar(
-              title: Text(title ?? 'WMS Customer App'),
+              title: Text(title ?? 'AutoAnywhere'),
               backgroundColor: const Color(0xFFCF2049),
               foregroundColor: Colors.white,
               actions: [
@@ -36,12 +37,7 @@ class PersistentLayout extends StatelessWidget {
                         IconButton(
                           icon: const Icon(Icons.notifications),
                           onPressed: () {
-                            // TODO: Navigate to notifications
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Notifications coming soon!'),
-                              ),
-                            );
+                            context.go('/notifications');
                           },
                         ),
                         if (customerProvider.unreadNotificationsCount > 0)

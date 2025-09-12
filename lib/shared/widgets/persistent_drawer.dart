@@ -123,13 +123,8 @@ class PersistentDrawer extends StatelessWidget {
                   context,
                   icon: Icons.settings,
                   title: 'Settings',
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Navigate to settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Settings coming soon!')),
-                    );
-                  },
+                  route: RouteNames.settings,
+                  isSelected: _isCurrentRoute(context, RouteNames.settings),
                 ),
 
                 // Help & Support
@@ -168,7 +163,7 @@ class PersistentDrawer extends StatelessWidget {
             child: const Column(
               children: [
                 Text(
-                  'WMS Customer App',
+                  'AutoAnywhere',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 Text(

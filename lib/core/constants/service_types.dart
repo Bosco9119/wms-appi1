@@ -160,43 +160,25 @@ class ServiceTypes {
     return 0;
   }
 
-  // Working hours configuration
+  // Working hours configuration - Updated to 9am-7pm Monday-Sunday
   static const Map<String, dynamic> workingHours = {
-    'monday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'tuesday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'wednesday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'thursday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'friday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'saturday': {'start': '10:00', 'end': '12:00', 'isOpen': true},
-    'sunday': {'start': '10:00', 'end': '12:00', 'isOpen': false},
-    'afternoonStart': '13:00',
-    'afternoonEnd': '16:00',
+    'monday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'tuesday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'wednesday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'thursday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'friday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'saturday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
+    'sunday': {'start': '09:00', 'end': '19:00', 'isOpen': true},
     'timeSlotDuration': 30,
     'breakTime': 0,
   };
 
-  // Generate all available time slots for a given day
+  // Generate all available time slots for a given day (9am-7pm)
   static List<String> generateAllTimeSlots() {
     final slots = <String>[];
 
-    // Morning slots (10:00-12:00)
-    for (int hour = 10; hour < 12; hour++) {
-      for (int minute = 0; minute < 60; minute += 30) {
-        final time =
-            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-        final nextMinute = minute + 30;
-        final nextHour = nextMinute >= 60 ? hour + 1 : hour;
-        final nextMinuteAdjusted = nextMinute >= 60
-            ? nextMinute - 60
-            : nextMinute;
-        final nextTime =
-            '${nextHour.toString().padLeft(2, '0')}:${nextMinuteAdjusted.toString().padLeft(2, '0')}';
-        slots.add('$time-$nextTime');
-      }
-    }
-
-    // Afternoon slots (13:00-16:00)
-    for (int hour = 13; hour < 16; hour++) {
+    // Generate slots from 9:00 AM to 7:00 PM (19:00)
+    for (int hour = 9; hour < 19; hour++) {
       for (int minute = 0; minute < 60; minute += 30) {
         final time =
             '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
@@ -221,13 +203,10 @@ class ServiceTypes {
     return slots;
   }
 
-  // Check if a date is valid for booking (not Sunday, not more than 1 month ahead)
+  // Check if a date is valid for booking (Monday-Sunday, not more than 1 month ahead)
   static bool isValidBookingDate(DateTime date) {
     final now = DateTime.now();
     final oneMonthFromNow = DateTime(now.year, now.month + 1, now.day);
-
-    // Check if date is not Sunday (weekday 7)
-    if (date.weekday == 7) return false;
 
     // Check if date is not more than 1 month ahead
     if (date.isAfter(oneMonthFromNow)) return false;
@@ -242,9 +221,9 @@ class ServiceTypes {
   static bool isTimeSlotInPast(String timeSlot, DateTime date) {
     final now = DateTime.now();
     final timeParts = timeSlot.split('-')[0].split(':');
-    
+
     if (timeParts.length < 2) return true;
-    
+
     final slotTime = DateTime(
       date.year,
       date.month,
@@ -252,22 +231,24 @@ class ServiceTypes {
       int.parse(timeParts[0]),
       int.parse(timeParts[1]),
     );
-    
+
     return slotTime.isBefore(now);
   }
 
   // Get available time slots for a specific date, filtering out past slots
   static List<String> getAvailableTimeSlotsForDate(DateTime date) {
     if (!isValidBookingDate(date)) return [];
-    
+
     final allSlots = generateAllTimeSlots();
     final now = DateTime.now();
-    
+
     // If it's today, filter out past time slots
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return allSlots.where((slot) => !isTimeSlotInPast(slot, date)).toList();
     }
-    
+
     // For future dates, return all slots
     return allSlots;
   }

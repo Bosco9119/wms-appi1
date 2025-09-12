@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/shop_service.dart';
+import '../../../core/constants/service_types.dart';
 import '../../../shared/models/shop_model.dart';
 import '../../../core/navigation/route_names.dart';
 
@@ -69,7 +70,11 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: const Color(0xFFCF2049)),
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: const Color(0xFFCF2049),
+            ),
             const SizedBox(height: 16),
             Text('Error', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
@@ -173,7 +178,9 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: shop.isOpen ? Colors.green : const Color(0xFFCF2049),
+                        color: shop.isOpen
+                            ? Colors.green
+                            : const Color(0xFFCF2049),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -260,6 +267,11 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                   shop.operatingHours,
                 ),
 
+                const SizedBox(height: 24),
+
+                // Available Services Section
+                _buildServicesSection(shop),
+
                 const SizedBox(height: 32),
 
                 // Book Now Button
@@ -267,11 +279,17 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: shop.isOpen ? () {
-                      context.go(RouteNames.bookingRoute(widget.shopId, shop.name));
-                    } : null,
+                    onPressed: shop.isOpen
+                        ? () {
+                            context.go(
+                              RouteNames.bookingRoute(widget.shopId, shop.name),
+                            );
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: shop.isOpen ? const Color(0xFFCF2049) : Colors.grey,
+                      backgroundColor: shop.isOpen
+                          ? const Color(0xFFCF2049)
+                          : Colors.grey,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -324,5 +342,151 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildServicesSection(Shop shop) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.build_circle_outlined,
+                  color: Color(0xFFCF2049),
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Available Services',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFCF2049),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (shop.services.isEmpty)
+              const Text(
+                'No services available',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: shop.services.map((serviceName) {
+                  final serviceType = ServiceTypes.getByName(serviceName);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCF2049).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFCF2049).withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getServiceIcon(serviceName),
+                          size: 16,
+                          color: const Color(0xFFCF2049),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          serviceName,
+                          style: const TextStyle(
+                            color: Color(0xFFCF2049),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (serviceType != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${serviceType.durationDisplay})',
+                            style: TextStyle(
+                              color: const Color(0xFFCF2049).withOpacity(0.7),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 12),
+            if (shop.services.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'All services shown are available for booking at this shop',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getServiceIcon(String serviceName) {
+    switch (serviceName) {
+      case 'Oil Change':
+        return Icons.oil_barrel;
+      case 'Brake Check':
+        return Icons.stop_circle_outlined;
+      case 'Tire Rotation':
+        return Icons.rotate_right;
+      case 'Engine Diagnostic':
+        return Icons.engineering;
+      case 'Transmission Service':
+        return Icons.settings;
+      case 'Battery Check':
+        return Icons.battery_charging_full;
+      case 'Air Filter Replacement':
+        return Icons.air;
+      case 'Spark Plug Replacement':
+        return Icons.flash_on;
+      case 'Coolant Flush':
+        return Icons.water_drop;
+      case 'AC System Check':
+        return Icons.ac_unit;
+      case 'Wheel Alignment':
+        return Icons.straighten;
+      case 'Exhaust System Check':
+        return Icons.smoke_free;
+      default:
+        return Icons.build;
+    }
   }
 }

@@ -54,7 +54,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: selectedTab == 0 ? const Color(0xFFCF2049) : Colors.grey[300],
+                      color: selectedTab == 0
+                          ? const Color(0xFFCF2049)
+                          : Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
@@ -75,7 +77,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: selectedTab == 1 ? const Color(0xFFCF2049) : Colors.grey[300],
+                      color: selectedTab == 1
+                          ? const Color(0xFFCF2049)
+                          : Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
@@ -102,28 +106,56 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               : NearbyShopsList(serviceType: selectedServiceType),
         ),
 
-        // Search Shops Button
+        // Action Buttons
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                context.go(RouteNames.searchShops);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFFCF2049),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          child: Column(
+            children: [
+              // Service Progress Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.go('/service-progress');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCF2049),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.build_circle_outlined),
+                  label: const Text(
+                    'Track Service Progress',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
-              child: const Text(
-                'Search Shops',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              // Search Shops Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    context.go(RouteNames.searchShops);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFFCF2049),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Search Shops',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ],

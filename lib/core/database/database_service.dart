@@ -191,12 +191,11 @@ class DatabaseService {
   Future<void> insertCustomer(Customer customer) async {
     final db = await database;
     await db.insert(
-      'customers', 
+      'customers',
       customer.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
-
 
   Future<Customer?> getCurrentCustomer() async {
     final db = await database;
@@ -210,7 +209,6 @@ class DatabaseService {
     }
     return null;
   }
-
 
   Future<void> updateCustomer(Customer customer) async {
     final db = await database;
@@ -232,7 +230,6 @@ class DatabaseService {
     await db.delete('feedback');
     await db.delete('notifications');
   }
-
 
   // Vehicle operations
   Future<void> insertVehicle(Vehicle vehicle) async {
@@ -309,7 +306,7 @@ class DatabaseService {
   // Invoice operations
   Future<void> insertInvoice(Invoice invoice) async {
     final db = await database;
-    await db.insert('invoices', invoice.toMap());
+    await db.insert('invoices', invoice.toJson());
   }
 
   Future<List<Invoice>> getCustomerInvoices(String customerId) async {
@@ -320,7 +317,7 @@ class DatabaseService {
       whereArgs: [customerId],
       orderBy: 'created_at DESC',
     );
-    return List.generate(maps.length, (i) => Invoice.fromMap(maps[i]));
+    return List.generate(maps.length, (i) => Invoice.fromJson(maps[i]));
   }
 
   Future<Invoice?> getInvoice(String invoiceId) async {
@@ -331,7 +328,7 @@ class DatabaseService {
       whereArgs: [invoiceId],
     );
     if (maps.isNotEmpty) {
-      return Invoice.fromMap(maps.first);
+      return Invoice.fromJson(maps.first);
     }
     return null;
   }

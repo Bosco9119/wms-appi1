@@ -9,6 +9,9 @@ class RouteNames {
   static const String billing = '/billing';
   static const String wallet = '/wallet';
   static const String feedback = '/feedback';
+  static const String settings = '/settings';
+  static const String notificationSettings = '/settings/notifications';
+  static const String notifications = '/notifications';
 
   // Service Booking Routes
   static const String searchShops = '/search-shops';

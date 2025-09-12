@@ -7,13 +7,20 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
-import 'package:wms_app/main.dart';
+import 'package:auto_anywhere_app/main.dart';
+import 'package:auto_anywhere_app/shared/providers/customer_provider.dart';
 
 void main() {
-  testWidgets('WMS App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const WMSApp());
+  testWidgets('AutoAnywhere App smoke test', (WidgetTester tester) async {
+    // Build our app with required providers and trigger a frame.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [ChangeNotifierProvider(create: (_) => CustomerProvider())],
+        child: const AutoAnywhereApp(),
+      ),
+    );
 
     // Verify that the app loads without crashing
     expect(find.byType(MaterialApp), findsOneWidget);

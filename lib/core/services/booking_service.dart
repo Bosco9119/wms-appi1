@@ -4,6 +4,9 @@ import '../../shared/models/booking_model.dart';
 import '../../shared/models/time_slot_model.dart';
 import '../../shared/models/shop_availability_model.dart';
 import '../constants/service_types.dart';
+import 'reminder_scheduler.dart';
+import 'billing_service.dart';
+import 'service_progress_service.dart';
 
 class BookingService {
   static final BookingService _instance = BookingService._internal();
@@ -12,6 +15,10 @@ class BookingService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ReminderScheduler _reminderScheduler = ReminderScheduler();
+  final BillingService _billingService = BillingService();
+  final ServiceProgressService _serviceProgressService =
+      ServiceProgressService();
 
   // Collection references
   CollectionReference get _bookingsRef => _firestore.collection('bookings');
@@ -31,6 +38,35 @@ class BookingService {
   }) async {
     if (_currentUserId == null) {
       throw Exception('User not authenticated');
+    }
+
+    print('🔍 BookingService: Starting booking process...');
+    print('👤 Current user ID: $_currentUserId');
+
+    // Validate that the shop offers the requested services
+    await _validateShopServices(shopId, serviceTypes);
+
+    // First, let's verify customer data exists in Firestore
+    try {
+      final customerDoc = await _firestore
+          .collection('customers')
+          .doc(_currentUserId!)
+          .get();
+
+      if (!customerDoc.exists) {
+        print('❌ Customer document not found in Firestore!');
+        print('❌ This means customer data was not saved during registration!');
+        throw Exception('Customer data not found. Please register again.');
+      }
+
+      final customerData = customerDoc.data() as Map<String, dynamic>;
+      print('✅ Customer data verification successful:');
+      print('   👤 Customer name: ${customerData['full_name']}');
+      print('   📱 Customer phone: ${customerData['phone_number']}');
+      print('   📧 Customer email: ${customerData['email']}');
+    } catch (e) {
+      print('❌ Customer data verification failed: $e');
+      throw Exception('Cannot proceed with booking: $e');
     }
 
     // Validate date and time
@@ -92,7 +128,9 @@ class BookingService {
 
     try {
       // Use transaction to prevent double booking
-      return await _firestore.runTransaction<Booking?>((transaction) async {
+      final result = await _firestore.runTransaction<Booking?>((
+        transaction,
+      ) async {
         // 1. Check shop availability
         final availabilityRef = _shopsRef
             .doc(shopId)
@@ -135,17 +173,41 @@ class BookingService {
         }
 
         final shopData = shopDoc.data() as Map<String, dynamic>;
+        print('🏪 Shop data retrieved: ${shopData['name']}');
+
+        print('👤 Fetching customer data for user: $_currentUserId');
         final customerDoc = await transaction.get(
           _firestore.collection('customers').doc(_currentUserId!),
         );
+
         if (!customerDoc.exists) {
+          print('❌ Customer document not found in Firestore!');
+          print('❌ Document path: customers/$_currentUserId');
           throw Exception('Customer not found');
         }
 
         final customerData = customerDoc.data() as Map<String, dynamic>;
+        print('✅ Customer data retrieved from Firestore:');
+        print('   👤 Customer ID: ${customerData['id']}');
+        print('   👤 Customer name: ${customerData['full_name']}');
+        print('   📧 Customer email: ${customerData['email']}');
+        print('   📱 Customer phone: ${customerData['phone_number']}');
+        print('   📅 Created at: ${customerData['created_at']}');
+        print('   📅 Updated at: ${customerData['updated_at']}');
 
         // 5. Create booking
         final bookingRef = _bookingsRef.doc();
+
+        // Extract customer data with fallbacks - using correct field names from Firestore
+        final customerName = customerData['full_name'] ?? 'Unknown Customer';
+        final customerPhone = customerData['phone_number'] ?? '';
+        final customerEmail = customerData['email'] ?? '';
+
+        print('📝 Creating booking with customer data:');
+        print('   👤 Customer name: $customerName');
+        print('   📱 Customer phone: $customerPhone');
+        print('   📧 Customer email: $customerEmail');
+
         final booking = Booking(
           id: bookingRef.id,
           shopId: shopId,
@@ -163,10 +225,16 @@ class BookingService {
           shopName: shopData['name'] ?? 'Unknown Shop',
           shopAddress: shopData['address'] ?? '',
           shopPhone: shopData['phone'] ?? '',
-          customerName: customerData['fullName'] ?? 'Unknown Customer',
-          customerPhone: customerData['phoneNumber'] ?? '',
-          customerEmail: customerData['email'] ?? '',
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerEmail: customerEmail,
         );
+
+        print('✅ Booking object created successfully');
+        print('   📋 Booking ID: ${booking.id}');
+        print('   👤 Booking customer name: ${booking.customerName}');
+        print('   📱 Booking customer phone: ${booking.customerPhone}');
+        print('   📧 Booking customer email: ${booking.customerEmail}');
 
         // 6. Update availability - mark slots as booked
         final updatedTimeSlots = availability.timeSlots.map(
@@ -189,6 +257,47 @@ class BookingService {
 
         return booking;
       });
+
+      // Schedule reminders for the booking
+      if (result != null) {
+        await _reminderScheduler.scheduleBookingReminders(result);
+        print('✅ Booking confirmed! Reminders scheduled.');
+
+        // Create service progress tracking
+        try {
+          final serviceProgress = await _serviceProgressService
+              .createServiceProgressFromBooking(result);
+          if (serviceProgress != null) {
+            print('✅ Service progress created: ${serviceProgress.id}');
+          } else {
+            print(
+              '⚠️ Failed to create service progress for booking: ${result.id}',
+            );
+          }
+        } catch (e) {
+          print('❌ Error creating service progress: $e');
+        }
+
+        // Generate invoice for the booking
+        try {
+          final invoice = await _billingService.createInvoiceFromBooking(
+            result,
+            notes:
+                'Invoice for appointment on ${result.date} at ${result.timeSlot}',
+            terms: 'Payment due within 30 days of invoice date',
+          );
+
+          if (invoice != null) {
+            print('✅ Invoice generated: ${invoice.invoiceNumber}');
+          } else {
+            print('⚠️ Failed to generate invoice for booking: ${result.id}');
+          }
+        } catch (e) {
+          print('❌ Error generating invoice: $e');
+        }
+      }
+
+      return result;
     } catch (e) {
       print('❌ BookingService Error: $e');
       rethrow;
@@ -230,7 +339,7 @@ class BookingService {
     }
 
     try {
-      return await _firestore.runTransaction<bool>((transaction) async {
+      final result = await _firestore.runTransaction<bool>((transaction) async {
         // 1. Get booking details
         final bookingRef = _bookingsRef.doc(bookingId);
         final bookingDoc = await transaction.get(bookingRef);
@@ -302,6 +411,13 @@ class BookingService {
 
         return true;
       });
+
+      // Cancel reminders for the cancelled booking
+      if (result) {
+        await _reminderScheduler.cancelBookingReminders(bookingId);
+      }
+
+      return result;
     } catch (e) {
       print('❌ BookingService Error: $e');
       rethrow;
@@ -552,5 +668,39 @@ class BookingService {
       print('Error parsing time to minutes: $e');
     }
     return 0;
+  }
+
+  /// Validate that the shop offers the requested services
+  Future<void> _validateShopServices(
+    String shopId,
+    List<String> requestedServices,
+  ) async {
+    try {
+      final shopDoc = await _shopsRef.doc(shopId).get();
+      if (!shopDoc.exists) {
+        throw Exception('Shop not found');
+      }
+
+      final shopData = shopDoc.data() as Map<String, dynamic>;
+      final List<String> shopServices = List<String>.from(
+        shopData['services'] ?? [],
+      );
+
+      // Check if all requested services are available at the shop
+      final unavailableServices = requestedServices
+          .where((service) => !shopServices.contains(service))
+          .toList();
+
+      if (unavailableServices.isNotEmpty) {
+        throw Exception(
+          'The following services are not available at this shop: ${unavailableServices.join(', ')}',
+        );
+      }
+
+      print('✅ All requested services are available at the shop');
+    } catch (e) {
+      print('❌ Service validation error: $e');
+      rethrow;
+    }
   }
 }

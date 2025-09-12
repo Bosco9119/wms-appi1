@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/service_types.dart';
+import '../../../shared/models/service_type_model.dart';
 
 class MultiServiceSelector extends StatelessWidget {
   final List<String> selectedServices;
   final Function(List<String>) onServicesChanged;
+  final List<String>?
+  availableServices; // Optional: restrict to specific services
 
   const MultiServiceSelector({
     super.key,
     required this.selectedServices,
     required this.onServicesChanged,
+    this.availableServices,
   });
 
   @override
@@ -24,9 +28,9 @@ class MultiServiceSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ServiceTypes.all.map((serviceType) {
+          children: _getAvailableServiceTypes().map((serviceType) {
             final isSelected = selectedServices.contains(serviceType.name);
-            
+
             return GestureDetector(
               onTap: () {
                 final newSelection = List<String>.from(selectedServices);
@@ -43,8 +47,8 @@ class MultiServiceSelector extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected 
-                      ? const Color(0xFFCF2049) 
+                  color: isSelected
+                      ? const Color(0xFFCF2049)
                       : Colors.grey[200],
                   borderRadius: BorderRadius.circular(20),
                   border: isSelected
@@ -55,11 +59,7 @@ class MultiServiceSelector extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isSelected)
-                      const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+                      const Icon(Icons.check, size: 16, color: Colors.white),
                     if (isSelected) const SizedBox(width: 4),
                     Text(
                       serviceType.name,
@@ -148,5 +148,17 @@ class MultiServiceSelector extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  List<ServiceType> _getAvailableServiceTypes() {
+    if (availableServices == null) {
+      // If no restriction, return all service types
+      return ServiceTypes.all;
+    } else {
+      // Filter service types based on available services
+      return ServiceTypes.all
+          .where((serviceType) => availableServices!.contains(serviceType.name))
+          .toList();
+    }
   }
 }

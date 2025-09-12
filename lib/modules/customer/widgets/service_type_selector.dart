@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/service_types.dart';
 
 class ServiceTypeSelector extends StatelessWidget {
   final String selectedType;
@@ -25,10 +25,11 @@ class ServiceTypeSelector extends StatelessWidget {
           height: 40,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: AppConstants.serviceTypes.length,
+            itemCount: _getServiceTypes().length,
             itemBuilder: (context, index) {
-              final serviceType = AppConstants.serviceTypes[index];
+              final serviceType = _getServiceTypes()[index];
               final isSelected = selectedType == serviceType;
+              final isAll = serviceType == 'All';
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
@@ -40,10 +41,17 @@ class ServiceTypeSelector extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.blue : Colors.grey[200],
+                      color: isSelected
+                          ? (isAll ? const Color(0xFFCF2049) : Colors.blue)
+                          : Colors.grey[200],
                       borderRadius: BorderRadius.circular(20),
                       border: isSelected
-                          ? Border.all(color: Colors.blue, width: 2)
+                          ? Border.all(
+                              color: isAll
+                                  ? const Color(0xFFCF2049)
+                                  : Colors.blue,
+                              width: 2,
+                            )
                           : null,
                     ),
                     child: Center(
@@ -65,5 +73,10 @@ class ServiceTypeSelector extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  List<String> _getServiceTypes() {
+    // Get all service types including "All"
+    return ['All', ...ServiceTypes.all.map((s) => s.name)];
   }
 }

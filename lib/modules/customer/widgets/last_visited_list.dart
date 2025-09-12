@@ -17,15 +17,15 @@ class LastVisitedList extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final lastVisitedShops = customerProvider.lastVisitedShops
+        final confirmedBookings = customerProvider.confirmedBookings
             .where(
-              (shop) =>
+              (booking) =>
                   serviceType == 'All' ||
-                  shop['services']?.contains(serviceType) == true,
+                  booking.serviceTypes.contains(serviceType),
             )
             .toList();
 
-        if (lastVisitedShops.isEmpty) {
+        if (confirmedBookings.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -33,7 +33,7 @@ class LastVisitedList extends StatelessWidget {
                 Icon(Icons.history, size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
-                  'No recent visits',
+                  'No completed services',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -42,7 +42,7 @@ class LastVisitedList extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your recent workshop visits will appear here',
+                  'Your completed service bookings will appear here',
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   textAlign: TextAlign.center,
                 ),
@@ -53,14 +53,14 @@ class LastVisitedList extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: lastVisitedShops.length,
+          itemCount: confirmedBookings.length,
           itemBuilder: (context, index) {
-            final shop = lastVisitedShops[index];
+            final booking = confirmedBookings[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GestureDetector(
                 onTap: () {
-                  context.go(RouteNames.shopDetailsRoute(shop['id']));
+                  context.go(RouteNames.shopDetailsRoute(booking.shopId));
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -73,10 +73,17 @@ class LastVisitedList extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.location_on,
-                        color: const Color(0xFFCF2049),
-                        size: 20,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.check_circle,
+                          color: Colors.green[600],
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -84,7 +91,7 @@ class LastVisitedList extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              shop['name'] ?? 'Unknown Shop',
+                              booking.shopName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -93,22 +100,37 @@ class LastVisitedList extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              shop['lastVisited'] ?? 'Unknown Date',
+                              'Completed: ${_formatDate(booking.updatedAt)}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
                               ),
                             ),
-                            if (shop['services'] != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Services: ${shop['services']}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Date: ${booking.date} at ${booking.timeSlot}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
                               ),
-                            ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Services: ${booking.serviceTypes.join(', ')}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Status: ${booking.statusDisplayName}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -126,5 +148,20 @@ class LastVisitedList extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 }

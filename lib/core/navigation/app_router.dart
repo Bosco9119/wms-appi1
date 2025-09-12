@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/billing_service.dart';
 import '../../modules/customer/screens/customer_home_screen.dart';
 import '../../modules/customer/screens/schedule_screen.dart';
-import '../../modules/billing/screens/billing_screen.dart';
+import '../../modules/billing/screens/invoice_list_screen.dart';
 import '../../modules/e_wallet/screens/wallet_screen.dart';
 import '../../modules/feedback/screens/feedback_screen.dart';
 import '../../modules/customer/screens/service_booking_screen.dart';
 import '../../modules/customer/screens/shop_search_screen.dart';
 import '../../modules/customer/screens/shop_details_screen.dart';
 import '../../modules/schedule/screens/appointment_details_screen.dart';
-import '../../modules/schedule/screens/service_progress_screen.dart';
+import '../../modules/service_progress/screens/service_progress_screen.dart';
 import '../../modules/billing/screens/invoice_details_screen.dart';
 import '../../modules/billing/screens/payment_screen.dart';
+import '../../modules/settings/screens/settings_screen.dart';
+import '../../modules/settings/screens/notification_settings_screen.dart';
+import '../../modules/notifications/screens/notifications_screen.dart';
 import '../../shared/widgets/persistent_layout.dart';
 
 class AppRouter {
@@ -77,7 +81,7 @@ class AppRouter {
             name: 'billing',
             builder: (context, state) => const PersistentPage(
               title: 'Billing & Invoices',
-              child: BillingScreen(),
+              child: InvoiceListScreen(),
             ),
           ),
           GoRoute(
@@ -92,6 +96,30 @@ class AppRouter {
             builder: (context, state) => const PersistentPage(
               title: 'Feedback',
               child: FeedbackScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const PersistentPage(
+              title: 'Settings',
+              child: SettingsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/settings/notifications',
+            name: 'notificationSettings',
+            builder: (context, state) => const PersistentPage(
+              title: 'Notification Settings',
+              child: NotificationSettingsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/notifications',
+            name: 'notifications',
+            builder: (context, state) => const PersistentPage(
+              title: 'Notifications',
+              child: NotificationsScreen(),
             ),
           ),
 
@@ -143,15 +171,12 @@ class AppRouter {
             },
           ),
           GoRoute(
-            path: '/service-progress/:appointmentId',
+            path: '/service-progress',
             name: 'service-progress',
-            builder: (context, state) {
-              final appointmentId = state.pathParameters['appointmentId']!;
-              return PersistentPage(
-                title: 'Service Progress',
-                child: ServiceProgressScreen(appointmentId: appointmentId),
-              );
-            },
+            builder: (context, state) => PersistentPage(
+              title: 'Service Progress',
+              child: const ServiceProgressScreen(),
+            ),
           ),
 
           // Billing Routes
@@ -173,7 +198,24 @@ class AppRouter {
               final invoiceId = state.pathParameters['invoiceId']!;
               return PersistentPage(
                 title: 'Payment',
-                child: PaymentScreen(invoiceId: invoiceId),
+                child: FutureBuilder(
+                  future: BillingService().getInvoiceById(invoiceId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return const Center(child: Text('Invoice not found'));
+                    }
+                    return PaymentScreen(
+                      invoice: snapshot.data!,
+                      onPaymentSuccess: () {
+                        // Navigate back to invoice details
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                ),
               );
             },
           ),
