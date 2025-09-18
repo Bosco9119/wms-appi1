@@ -6,6 +6,8 @@ import '../../modules/customer/screens/schedule_screen.dart';
 import '../../modules/billing/screens/invoice_list_screen.dart';
 import '../../modules/e_wallet/screens/wallet_screen.dart';
 import '../../modules/feedback/screens/feedback_screen.dart';
+import '../../modules/feedback/screens/feedback_form_screen.dart';
+import '../../shared/models/service_progress_model.dart';
 import '../../modules/customer/screens/service_booking_screen.dart';
 import '../../modules/customer/screens/shop_search_screen.dart';
 import '../../modules/customer/screens/shop_details_screen.dart';
@@ -97,6 +99,27 @@ class AppRouter {
               title: 'Feedback',
               child: FeedbackScreen(),
             ),
+          ),
+          GoRoute(
+            path: '/feedback/form',
+            name: 'feedbackForm',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              final sp = extra?['sp'] as ServiceProgress?;
+              final feedback = extra?['feedback'] as Map<String, dynamic>?;
+              if (sp == null) {
+                return const Scaffold(
+                  body: Center(child: Text('Service progress not found')),
+                );
+              }
+              return PersistentPage(
+                title: feedback == null ? 'Submit Feedback' : 'Edit Feedback',
+                child: FeedbackFormScreen(
+                  serviceProgress: sp,
+                  existingFeedback: feedback,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/settings',
