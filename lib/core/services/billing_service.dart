@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../shared/models/invoice_model.dart';
-import '../../shared/models/payment_model.dart';
 import '../../shared/models/billing_item_model.dart';
 import '../../shared/models/booking_model.dart';
+import '../constants/service_types.dart';
 
 class BillingService {
   static final BillingService _instance = BillingService._internal();
@@ -120,26 +120,24 @@ class BillingService {
     }
   }
 
-  /// Get service price (mock implementation - should be from service catalog)
+  /// Get service price - uses ServiceTypes for consistent pricing
   double _getServicePrice(String serviceType) {
-    // Mock pricing - in real app, this should come from a service catalog
+    // First try to get the service from ServiceTypes
+    final service = ServiceTypes.getByName(serviceType);
+    if (service != null) {
+      return service.baseCost;
+    }
+    
+    // Fallback for legacy service names or unknown services
     switch (serviceType.toLowerCase()) {
       case 'engine repair':
-        return 150.0;
-      case 'transmission service':
-        return 200.0;
-      case 'suspension work':
-        return 120.0;
+        return 120.0; // Map to engine diagnostic
       case 'brake service':
-        return 80.0;
-      case 'oil change':
-        return 50.0;
-      case 'tire rotation':
-        return 30.0;
+        return 80.0; // Map to brake check
       case 'battery replacement':
-        return 100.0;
-      case 'air filter replacement':
-        return 25.0;
+        return 30.0; // Map to battery check
+      case 'suspension work':
+        return 120.0; // Map to engine diagnostic
       default:
         return 75.0; // Default price
     }
@@ -217,46 +215,49 @@ class BillingService {
     }
   }
 
-  /// Process payment
-  Future<Payment?> processPayment({
+  /// Process Billplz payment completion
+  Future<bool> processBillplzPayment({
     required String invoiceId,
-    required PaymentMethod method,
     required double amount,
-    String? transactionId,
-    String? reference,
+    required String billplzBillId,
     String? notes,
   }) async {
     try {
-      print('💳 Processing payment for invoice: $invoiceId');
+      print('💳 Processing Billplz payment for invoice: $invoiceId');
 
-      // Create payment record
-      final payment = Payment(
-        id: _firestore.collection(_paymentsCollection).doc().id,
-        invoiceId: invoiceId,
-        method: method,
-        status: PaymentStatus.completed,
-        amount: amount,
-        transactionId: transactionId,
-        reference: reference,
-        notes: notes,
-        createdAt: DateTime.now(),
-        completedAt: DateTime.now(),
-      );
+      // Check if invoice exists and get current state
+      final invoiceDoc = await _firestore
+          .collection(_invoicesCollection)
+          .doc(invoiceId)
+          .get();
 
-      // Save payment
-      await _firestore
-          .collection(_paymentsCollection)
-          .doc(payment.id)
-          .set(payment.toJson());
+      if (!invoiceDoc.exists) {
+        print('❌ Invoice not found: $invoiceId');
+        return false;
+      }
 
-      // Update invoice
+      final invoice = Invoice.fromJson(invoiceDoc.data()!);
+      
+      // Check if invoice is already fully paid
+      if (invoice.isPaid) {
+        print('⚠️ Invoice already fully paid: $invoiceId');
+        return false;
+      }
+
+      // Check if payment amount exceeds balance
+      if (amount > invoice.balanceAmount) {
+        print('⚠️ Payment amount (RM ${amount.toStringAsFixed(2)}) exceeds balance (RM ${invoice.balanceAmount.toStringAsFixed(2)})');
+        return false;
+      }
+
+      // Update invoice directly (Billplz payment record is already saved in PaymentService)
       await _updateInvoicePayment(invoiceId, amount);
 
-      print('✅ Payment processed: ${payment.id}');
-      return payment;
+      print('✅ Billplz payment processed for invoice: $invoiceId');
+      return true;
     } catch (e) {
-      print('❌ Error processing payment: $e');
-      return null;
+      print('❌ Error processing Billplz payment: $e');
+      return false;
     }
   }
 
@@ -266,6 +267,9 @@ class BillingService {
     double paymentAmount,
   ) async {
     try {
+      print('🔄 Updating invoice payment for: $invoiceId');
+      print('   💰 Payment amount: RM ${paymentAmount.toStringAsFixed(2)}');
+      
       final invoiceDoc = await _firestore
           .collection(_invoicesCollection)
           .doc(invoiceId)
@@ -279,35 +283,29 @@ class BillingService {
             ? InvoiceStatus.paid
             : InvoiceStatus.sent;
 
+        print('   📊 Invoice details:');
+        print('      💰 Total: RM ${invoice.totalAmount.toStringAsFixed(2)}');
+        print('      💳 Current paid: RM ${invoice.paidAmount.toStringAsFixed(2)}');
+        print('      💳 New paid: RM ${newPaidAmount.toStringAsFixed(2)}');
+        print('      ⚖️ New balance: RM ${newBalanceAmount.toStringAsFixed(2)}');
+        print('      📋 New status: ${newStatus.name}');
+
         await _firestore.collection(_invoicesCollection).doc(invoiceId).update({
           'paidAmount': newPaidAmount,
           'balanceAmount': newBalanceAmount,
           'status': newStatus.name,
           'updatedAt': DateTime.now().toIso8601String(),
         });
+        
+        print('✅ Invoice updated successfully!');
+      } else {
+        print('❌ Invoice document not found: $invoiceId');
       }
     } catch (e) {
       print('❌ Error updating invoice payment: $e');
     }
   }
 
-  /// Get payments for an invoice
-  Future<List<Payment>> getInvoicePayments(String invoiceId) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection(_paymentsCollection)
-          .where('invoiceId', isEqualTo: invoiceId)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return querySnapshot.docs
-          .map((doc) => Payment.fromJson(doc.data()))
-          .toList();
-    } catch (e) {
-      print('❌ Error fetching invoice payments: $e');
-      return [];
-    }
-  }
 
   /// Get billing statistics for a customer
   Future<Map<String, dynamic>> getBillingStatistics(String customerId) async {
@@ -366,5 +364,85 @@ class BillingService {
   /// Refund invoice
   Future<bool> refundInvoice(String invoiceId) async {
     return await updateInvoiceStatus(invoiceId, InvoiceStatus.refunded);
+  }
+
+  /// Fix corrupted invoice data (for database cleanup)
+  Future<bool> fixInvoiceData(String invoiceId) async {
+    try {
+      print('🔧 Fixing invoice data for: $invoiceId');
+      
+      final invoiceDoc = await _firestore
+          .collection(_invoicesCollection)
+          .doc(invoiceId)
+          .get();
+
+      if (!invoiceDoc.exists) {
+        print('❌ Invoice not found: $invoiceId');
+        return false;
+      }
+
+      final invoice = Invoice.fromJson(invoiceDoc.data()!);
+      
+      // Get all Billplz payments for this invoice from the payments collection
+      final paymentsQuery = await _firestore
+          .collection('payments')
+          .where('orderId', isEqualTo: invoice.invoiceNumber)
+          .where('status', isEqualTo: 'completed')
+          .get();
+      
+      final totalPaidAmount = paymentsQuery.docs.fold(0.0, (sum, doc) {
+        final data = doc.data();
+        return sum + (data['amount'] ?? 0.0).toDouble();
+      });
+      
+      // Calculate correct balance
+      final correctBalanceAmount = invoice.totalAmount - totalPaidAmount;
+      final correctStatus = correctBalanceAmount <= 0 ? InvoiceStatus.paid : InvoiceStatus.sent;
+      
+      print('📊 Invoice correction:');
+      print('   💰 Total: RM ${invoice.totalAmount.toStringAsFixed(2)}');
+      print('   💳 Current paid: RM ${invoice.paidAmount.toStringAsFixed(2)}');
+      print('   💳 Correct paid: RM ${totalPaidAmount.toStringAsFixed(2)}');
+      print('   ⚖️ Current balance: RM ${invoice.balanceAmount.toStringAsFixed(2)}');
+      print('   ⚖️ Correct balance: RM ${correctBalanceAmount.toStringAsFixed(2)}');
+      print('   📋 Current status: ${invoice.status.name}');
+      print('   📋 Correct status: ${correctStatus.name}');
+
+      // Update invoice with correct data
+      await _firestore.collection(_invoicesCollection).doc(invoiceId).update({
+        'paidAmount': totalPaidAmount,
+        'balanceAmount': correctBalanceAmount,
+        'status': correctStatus.name,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      print('✅ Invoice data fixed successfully!');
+      return true;
+    } catch (e) {
+      print('❌ Error fixing invoice data: $e');
+      return false;
+    }
+  }
+
+  /// Fix all corrupted invoices for a customer
+  Future<int> fixAllCustomerInvoices(String customerId) async {
+    try {
+      print('🔧 Fixing all invoices for customer: $customerId');
+      
+      final invoices = await getCustomerInvoices(customerId);
+      int fixedCount = 0;
+      
+      for (final invoice in invoices) {
+        if (await fixInvoiceData(invoice.id)) {
+          fixedCount++;
+        }
+      }
+      
+      print('✅ Fixed $fixedCount out of ${invoices.length} invoices');
+      return fixedCount;
+    } catch (e) {
+      print('❌ Error fixing customer invoices: $e');
+      return 0;
+    }
   }
 }

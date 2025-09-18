@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/billing_service.dart';
 import '../../../shared/models/invoice_model.dart';
-import '../../../shared/models/payment_model.dart';
 import '../../../shared/models/billing_item_model.dart';
-import 'payment_screen.dart';
+import '../../../shared/models/payment_model.dart' as payment_model;
+import '../../../shared/providers/customer_provider.dart';
+import '../../../modules/payment/screens/payment_screen.dart';
+import 'package:provider/provider.dart';
 
 class InvoiceDetailsScreen extends StatefulWidget {
   final String invoiceId;
@@ -17,7 +19,7 @@ class InvoiceDetailsScreen extends StatefulWidget {
 class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   final BillingService _billingService = BillingService();
   Invoice? _invoice;
-  List<Payment> _payments = [];
+  List<Map<String, dynamic>> _payments = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -36,12 +38,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     try {
       final invoice = await _billingService.getInvoiceById(widget.invoiceId);
       if (invoice != null) {
-        final payments = await _billingService.getInvoicePayments(
-          widget.invoiceId,
-        );
         setState(() {
           _invoice = invoice;
-          _payments = payments;
+          _payments = invoice.payments;
           _isLoading = false;
         });
       } else {
@@ -371,7 +370,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     );
   }
 
-  Widget _buildPaymentRow(Payment payment) {
+  Widget _buildPaymentRow(Map<String, dynamic> payment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -381,25 +380,25 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.methodDisplayName,
+                  payment['method'] ?? 'Unknown',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  _formatDate(payment.createdAt),
+                  _formatDate(DateTime.parse(payment['createdAt'] ?? DateTime.now().toIso8601String())),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
           Text(
-            'RM ${payment.amount.toStringAsFixed(2)}',
+            'RM ${(payment['amount'] ?? 0.0).toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: payment.status == PaymentStatus.completed
+              color: payment['status'] == 'completed'
                   ? Colors.green
                   : Colors.orange,
             ),
@@ -515,23 +514,82 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     );
   }
 
-  void _navigateToPayment() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PaymentScreen(
-          invoice: _invoice!,
-          onPaymentSuccess: () {
-            _loadInvoiceDetails();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Payment processed successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
+  Future<void> _navigateToPayment() async {
+    try {
+      // Get customer information
+      final customerProvider = Provider.of<CustomerProvider>(
+        context,
+        listen: false,
+      );
+      final customer = customerProvider.currentCustomer;
+
+      if (customer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Customer information not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Create payment request
+      final paymentRequest = payment_model.CreatePaymentRequest(
+        amount: _invoice!.balanceAmount,
+        description: 'Payment for Invoice ${_invoice!.invoiceNumber}',
+        customerName: customer.fullName ?? 'Customer',
+        customerEmail: customer.email ?? '',
+        customerPhone: customer.phoneNumber ?? '',
+        orderId: _invoice!.invoiceNumber,
+      );
+
+      // Navigate to payment screen with callback
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PaymentScreen(
+            paymentRequest: paymentRequest,
+            onPaymentComplete: (success) async {
+              if (success) {
+                // Payment was successful, update invoice status and refresh
+                await _updateInvoiceAfterPayment();
+                _loadInvoiceDetails();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment completed successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+              // Navigate back to invoice details
+              Navigator.of(context).pop();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateInvoiceAfterPayment() async {
+    try {
+      // Update invoice status to paid and update payment amounts
+      await _billingService.processBillplzPayment(
+        invoiceId: _invoice!.id,
+        amount: _invoice!.balanceAmount,
+        billplzBillId: 'BILLPLZ_${DateTime.now().millisecondsSinceEpoch}',
+        notes: 'Payment via Billplz',
+      );
+      
+      print('✅ Invoice ${_invoice!.invoiceNumber} updated after payment');
+    } catch (e) {
+      print('❌ Error updating invoice after payment: $e');
+    }
   }
 
   String _formatDate(DateTime date) {

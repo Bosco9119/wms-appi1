@@ -12,10 +12,10 @@ import '../../modules/customer/screens/shop_details_screen.dart';
 import '../../modules/schedule/screens/appointment_details_screen.dart';
 import '../../modules/service_progress/screens/service_progress_screen.dart';
 import '../../modules/billing/screens/invoice_details_screen.dart';
-import '../../modules/billing/screens/payment_screen.dart';
 import '../../modules/settings/screens/settings_screen.dart';
 import '../../modules/settings/screens/notification_settings_screen.dart';
 import '../../modules/notifications/screens/notifications_screen.dart';
+import '../../modules/payment/screens/payment_history_screen.dart';
 import '../../shared/widgets/persistent_layout.dart';
 
 class AppRouter {
@@ -191,34 +191,7 @@ class AppRouter {
               );
             },
           ),
-          GoRoute(
-            path: '/payment/:invoiceId',
-            name: 'payment',
-            builder: (context, state) {
-              final invoiceId = state.pathParameters['invoiceId']!;
-              return PersistentPage(
-                title: 'Payment',
-                child: FutureBuilder(
-                  future: BillingService().getInvoiceById(invoiceId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError || !snapshot.hasData) {
-                      return const Center(child: Text('Invoice not found'));
-                    }
-                    return PaymentScreen(
-                      invoice: snapshot.data!,
-                      onPaymentSuccess: () {
-                        // Navigate back to invoice details
-                        Navigator.of(context).pop();
-                      },
-                    );
-                  },
-                ),
-              );
-            },
-          ),
+
         ],
       ),
     ],

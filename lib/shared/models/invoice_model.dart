@@ -1,5 +1,4 @@
 import 'billing_item_model.dart';
-import 'payment_model.dart';
 
 enum InvoiceStatus {
   draft,
@@ -33,7 +32,7 @@ class Invoice {
   final DateTime dueDate;
   final String? notes;
   final String? terms;
-  final List<Payment> payments;
+  final List<Map<String, dynamic>> payments;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -95,7 +94,7 @@ class Invoice {
       notes: json['notes'],
       terms: json['terms'],
       payments: (json['payments'] as List<dynamic>?)
-          ?.map((payment) => Payment.fromJson(payment))
+          ?.map((payment) => payment as Map<String, dynamic>)
           .toList() ?? [],
       createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
@@ -126,7 +125,7 @@ class Invoice {
       'dueDate': dueDate.toIso8601String(),
       'notes': notes,
       'terms': terms,
-      'payments': payments.map((payment) => payment.toJson()).toList(),
+      'payments': payments,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -155,7 +154,7 @@ class Invoice {
     DateTime? dueDate,
     String? notes,
     String? terms,
-    List<Payment>? payments,
+    List<Map<String, dynamic>>? payments,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {

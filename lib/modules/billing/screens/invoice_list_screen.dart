@@ -4,6 +4,9 @@ import '../../../core/services/billing_service.dart';
 import '../../../core/navigation/route_names.dart';
 import '../../../shared/models/invoice_model.dart';
 import '../../../shared/providers/customer_provider.dart';
+import '../../../modules/payment/screens/payment_screen.dart';
+import '../../../shared/models/payment_model.dart';
+import 'payment_history_screen.dart';
 import 'package:provider/provider.dart';
 
 class InvoiceListScreen extends StatefulWidget {
@@ -79,6 +82,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         backgroundColor: const Color(0xFFCF2049),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.payment),
+            onPressed: _openPaymentHistory,
+            tooltip: 'Payment History',
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadInvoices),
         ],
       ),
@@ -221,6 +229,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   '${invoice.paymentProgress.toStringAsFixed(0)}% paid',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
+                const SizedBox(height: 12),
+                _buildPaymentButton(invoice),
               ],
             ],
           ),
@@ -232,31 +242,38 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   Widget _buildStatusChip(InvoiceStatus status) {
     Color backgroundColor;
     Color textColor;
+    String displayText;
 
     switch (status) {
       case InvoiceStatus.draft:
-        backgroundColor = Colors.grey[300]!;
-        textColor = Colors.grey[700]!;
+        backgroundColor = Colors.orange[100]!;
+        textColor = Colors.orange[700]!;
+        displayText = 'UNPAID';
         break;
       case InvoiceStatus.sent:
         backgroundColor = Colors.blue[100]!;
         textColor = Colors.blue[700]!;
+        displayText = 'SENT';
         break;
       case InvoiceStatus.paid:
         backgroundColor = Colors.green[100]!;
         textColor = Colors.green[700]!;
+        displayText = 'PAID';
         break;
       case InvoiceStatus.overdue:
         backgroundColor = Colors.red[100]!;
         textColor = Colors.red[700]!;
+        displayText = 'OVERDUE';
         break;
       case InvoiceStatus.cancelled:
         backgroundColor = Colors.grey[200]!;
         textColor = Colors.grey[600]!;
+        displayText = 'CANCELLED';
         break;
       case InvoiceStatus.refunded:
         backgroundColor = Colors.orange[100]!;
         textColor = Colors.orange[700]!;
+        displayText = 'REFUNDED';
         break;
     }
 
@@ -267,7 +284,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.name.toUpperCase(),
+        displayText,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -279,5 +296,110 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildPaymentButton(Invoice invoice) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => _processPayment(invoice),
+        icon: const Icon(Icons.payment, size: 18),
+        label: Text('Pay RM ${invoice.balanceAmount.toStringAsFixed(2)}'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFCF2049),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processPayment(Invoice invoice) async {
+    try {
+      // Get customer information
+      final customerProvider = Provider.of<CustomerProvider>(
+        context,
+        listen: false,
+      );
+      final customer = customerProvider.currentCustomer;
+
+      if (customer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Customer information not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Create payment request
+      final paymentRequest = CreatePaymentRequest(
+        amount: invoice.balanceAmount,
+        description: 'Payment for Invoice ${invoice.invoiceNumber}',
+        customerName: customer.fullName ?? 'Customer',
+        customerEmail: customer.email ?? '',
+        customerPhone: customer.phoneNumber ?? '',
+        orderId: invoice.invoiceNumber,
+      );
+
+      // Navigate to payment screen with callback
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PaymentScreen(
+            paymentRequest: paymentRequest,
+            onPaymentComplete: (success) async {
+              if (success) {
+                // Payment was successful, update invoice status and refresh
+                await _updateInvoiceAfterPayment(invoice);
+                _loadInvoices();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment completed successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+              // Navigate back to invoice list
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateInvoiceAfterPayment(Invoice invoice) async {
+    try {
+      // Update invoice status to paid and update payment amounts
+      await _billingService.processBillplzPayment(
+        invoiceId: invoice.id,
+        amount: invoice.balanceAmount,
+        billplzBillId: 'BILLPLZ_${DateTime.now().millisecondsSinceEpoch}',
+        notes: 'Payment via Billplz',
+      );
+      
+      print('✅ Invoice ${invoice.invoiceNumber} updated after payment');
+    } catch (e) {
+      print('❌ Error updating invoice after payment: $e');
+    }
+  }
+
+  void _openPaymentHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaymentHistoryScreen(),
+      ),
+    );
   }
 }

@@ -1,149 +1,209 @@
-enum PaymentMethod {
-  cash,
-  creditCard,
-  debitCard,
-  bankTransfer,
-  digitalWallet,
-  other,
-}
-
-enum PaymentStatus {
-  pending,
-  completed,
-  failed,
-  refunded,
-  cancelled,
-}
-
-class Payment {
-  final String id;
-  final String invoiceId;
-  final PaymentMethod method;
-  final PaymentStatus status;
+class PaymentModel {
+  final String billId;
+  final String orderId;
+  final String customerName;
+  final String customerEmail;
+  final String? customerPhone;
   final double amount;
-  final String? transactionId;
-  final String? reference;
-  final String? notes;
+  final String description;
+  final PaymentStatus status;
+  final String billUrl;
   final DateTime createdAt;
-  final DateTime? completedAt;
-  final String? failureReason;
+  final DateTime updatedAt;
+  final String? transactionId;
+  final DateTime? paidAt;
 
-  const Payment({
-    required this.id,
-    required this.invoiceId,
-    required this.method,
-    required this.status,
+  PaymentModel({
+    required this.billId,
+    required this.orderId,
+    required this.customerName,
+    required this.customerEmail,
+    this.customerPhone,
     required this.amount,
+    required this.description,
+    required this.status,
+    required this.billUrl,
     required this.createdAt,
+    required this.updatedAt,
     this.transactionId,
-    this.reference,
-    this.notes,
-    this.completedAt,
-    this.failureReason,
+    this.paidAt,
   });
 
-  factory Payment.fromJson(Map<String, dynamic> json) {
-    return Payment(
-      id: json['id'] ?? '',
-      invoiceId: json['invoiceId'] ?? '',
-      method: PaymentMethod.values.firstWhere(
-        (e) => e.name == json['method'],
-        orElse: () => PaymentMethod.cash,
-      ),
-      status: PaymentStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => PaymentStatus.pending,
-      ),
-      amount: (json['amount'] ?? 0.0).toDouble(),
+  factory PaymentModel.fromJson(Map<String, dynamic> json) {
+    return PaymentModel(
+      billId: json['billId'] ?? '',
+      orderId: json['orderId'] ?? '',
+      customerName: json['customerName'] ?? '',
+      customerEmail: json['customerEmail'] ?? '',
+      customerPhone: json['customerPhone'],
+      amount: (json['amount'] ?? 0).toDouble(),
+      description: json['description'] ?? '',
+      status: PaymentStatus.fromString(json['status'] ?? 'pending'),
+      billUrl: json['billUrl'] ?? '',
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt'].toDate().toString())
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt'].toDate().toString())
+          : DateTime.now(),
       transactionId: json['transactionId'],
-      reference: json['reference'],
-      notes: json['notes'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      completedAt: json['completedAt'] != null 
-          ? DateTime.parse(json['completedAt']) 
+      paidAt: json['paidAt'] != null 
+          ? DateTime.parse(json['paidAt'].toDate().toString())
           : null,
-      failureReason: json['failureReason'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'invoiceId': invoiceId,
-      'method': method.name,
-      'status': status.name,
+      'billId': billId,
+      'orderId': orderId,
+      'customerName': customerName,
+      'customerEmail': customerEmail,
+      'customerPhone': customerPhone,
       'amount': amount,
+      'description': description,
+      'status': status.value,
+      'billUrl': billUrl,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
       'transactionId': transactionId,
-      'reference': reference,
-      'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'completedAt': completedAt?.toIso8601String(),
-      'failureReason': failureReason,
+      'paidAt': paidAt,
     };
   }
 
-  Payment copyWith({
-    String? id,
-    String? invoiceId,
-    PaymentMethod? method,
-    PaymentStatus? status,
+  PaymentModel copyWith({
+    String? billId,
+    String? orderId,
+    String? customerName,
+    String? customerEmail,
+    String? customerPhone,
     double? amount,
-    String? transactionId,
-    String? reference,
-    String? notes,
+    String? description,
+    PaymentStatus? status,
+    String? billUrl,
     DateTime? createdAt,
-    DateTime? completedAt,
-    String? failureReason,
+    DateTime? updatedAt,
+    String? transactionId,
+    DateTime? paidAt,
   }) {
-    return Payment(
-      id: id ?? this.id,
-      invoiceId: invoiceId ?? this.invoiceId,
-      method: method ?? this.method,
-      status: status ?? this.status,
+    return PaymentModel(
+      billId: billId ?? this.billId,
+      orderId: orderId ?? this.orderId,
+      customerName: customerName ?? this.customerName,
+      customerEmail: customerEmail ?? this.customerEmail,
+      customerPhone: customerPhone ?? this.customerPhone,
       amount: amount ?? this.amount,
-      transactionId: transactionId ?? this.transactionId,
-      reference: reference ?? this.reference,
-      notes: notes ?? this.notes,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      billUrl: billUrl ?? this.billUrl,
       createdAt: createdAt ?? this.createdAt,
-      completedAt: completedAt ?? this.completedAt,
-      failureReason: failureReason ?? this.failureReason,
+      updatedAt: updatedAt ?? this.updatedAt,
+      transactionId: transactionId ?? this.transactionId,
+      paidAt: paidAt ?? this.paidAt,
     );
   }
+}
 
-  String get methodDisplayName {
-    switch (method) {
-      case PaymentMethod.cash:
-        return 'Cash';
-      case PaymentMethod.creditCard:
-        return 'Credit Card';
-      case PaymentMethod.debitCard:
-        return 'Debit Card';
-      case PaymentMethod.bankTransfer:
-        return 'Bank Transfer';
-      case PaymentMethod.digitalWallet:
-        return 'Digital Wallet';
-      case PaymentMethod.other:
-        return 'Other';
+enum PaymentStatus {
+  pending('pending'),
+  completed('completed'),
+  failed('failed'),
+  cancelled('cancelled');
+
+  const PaymentStatus(this.value);
+  final String value;
+
+  static PaymentStatus fromString(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return PaymentStatus.pending;
+      case 'completed':
+      case 'paid':
+        return PaymentStatus.completed;
+      case 'failed':
+        return PaymentStatus.failed;
+      case 'cancelled':
+      case 'canceled':
+        return PaymentStatus.cancelled;
+      default:
+        return PaymentStatus.pending;
     }
   }
 
-  String get statusDisplayName {
-    switch (status) {
+  String get displayName {
+    switch (this) {
       case PaymentStatus.pending:
         return 'Pending';
       case PaymentStatus.completed:
         return 'Completed';
       case PaymentStatus.failed:
         return 'Failed';
-      case PaymentStatus.refunded:
-        return 'Refunded';
       case PaymentStatus.cancelled:
         return 'Cancelled';
     }
   }
+}
 
-  @override
-  String toString() {
-    return 'Payment(id: $id, method: $methodDisplayName, status: $statusDisplayName, amount: $amount)';
+class CreatePaymentRequest {
+  final double amount;
+  final String description;
+  final String customerName;
+  final String customerEmail;
+  final String? customerPhone;
+  final String? orderId;
+
+  CreatePaymentRequest({
+    required this.amount,
+    required this.description,
+    required this.customerName,
+    required this.customerEmail,
+    this.customerPhone,
+    this.orderId,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'amount': amount,
+      'description': description,
+      'customerName': customerName,
+      'customerEmail': customerEmail,
+      'customerPhone': customerPhone,
+      'orderId': orderId,
+    };
+  }
+}
+
+class PaymentResponse {
+  final bool success;
+  final String? billId;
+  final String? billUrl;
+  final String? message;
+  final PaymentModel? payment;
+  final List<PaymentModel>? payments;
+
+  PaymentResponse({
+    required this.success,
+    this.billId,
+    this.billUrl,
+    this.message,
+    this.payment,
+    this.payments,
+  });
+
+  factory PaymentResponse.fromJson(Map<String, dynamic> json) {
+    return PaymentResponse(
+      success: json['success'] ?? false,
+      billId: json['billId'],
+      billUrl: json['billUrl'],
+      message: json['message'],
+      payment: json['payment'] != null 
+          ? PaymentModel.fromJson(json['payment'])
+          : null,
+      payments: json['payments'] != null
+          ? (json['payments'] as List)
+              .map((p) => PaymentModel.fromJson(p))
+              .toList()
+          : null,
+    );
   }
 }
