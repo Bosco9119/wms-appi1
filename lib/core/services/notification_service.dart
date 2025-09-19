@@ -279,7 +279,7 @@ class NotificationService {
     }
   }
 
-  /// Schedule a notification - simplified approach
+  /// Schedule a notification - using timer-based approach for reliability
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -295,6 +295,8 @@ class NotificationService {
       print('🔔 Scheduling notification: $title');
       print('🔔 Scheduled for: $scheduledDate');
       print('🔔 Current time: ${DateTime.now()}');
+      print('🔔 Time difference: ${scheduledDate.difference(DateTime.now())}');
+      print('🔔 Time difference in hours: ${scheduledDate.difference(DateTime.now()).inHours}');
 
       // Check if scheduled time is in the past
       if (scheduledDate.isBefore(DateTime.now())) {
@@ -307,142 +309,40 @@ class NotificationService {
         return;
       }
 
-      // Get the local timezone explicitly
-      final localTimeZone = tz.getLocation('Asia/Kuala_Lumpur');
-
-      // Convert to TZDateTime using explicit timezone
-      final tzScheduledDate = tz.TZDateTime(
-        localTimeZone,
-        scheduledDate.year,
-        scheduledDate.month,
-        scheduledDate.day,
-        scheduledDate.hour,
-        scheduledDate.minute,
-        scheduledDate.second,
-        scheduledDate.millisecond,
-        scheduledDate.microsecond,
-      );
-
-      print('🔍 DEBUG: Original scheduledDate: $scheduledDate');
-      print('🔍 DEBUG: TZDateTime: $tzScheduledDate');
-      print(
-        '🔍 DEBUG: Current TZDateTime: ${tz.TZDateTime.now(localTimeZone)}',
-      );
-      print(
-        '🔍 DEBUG: Time until scheduled: ${tzScheduledDate.difference(tz.TZDateTime.now(localTimeZone))}',
-      );
-
-      // Check if exact alarms are permitted
-      final canScheduleExact = await canScheduleExactNotifications();
-      print('🔍 DEBUG: Can schedule exact alarms: $canScheduleExact');
-
-      // Android notification details
-      const AndroidNotificationDetails androidDetails =
-          AndroidNotificationDetails(
-            'appointment_reminders',
-            'Appointment Reminders',
-            channelDescription: 'Notifications for appointment reminders',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-            color: Color(0xFFCF2049),
-            playSound: true,
-            enableVibration: true,
-            showWhen: true,
-            enableLights: true,
-            ledColor: Color(0xFFCF2049),
-            ledOnMs: 1000,
-            ledOffMs: 500,
-          );
-
-      // iOS notification details
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      // Combined notification details
-      const NotificationDetails notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      // Use the most reliable scheduling method for real-world usage
-      if (canScheduleExact) {
-        // Use exact scheduling with allowWhileIdle - this is the correct approach
-        await _notifications.zonedSchedule(
-          id,
-          title,
-          body,
-          tzScheduledDate,
-          notificationDetails,
+      // Use timer-based scheduling for better reliability
+      final delay = scheduledDate.difference(DateTime.now());
+      print('🔔 Using timer-based scheduling with delay: ${delay.inMinutes} minutes');
+      
+      // Store the notification info for later use
+      _scheduledNotifications[id] = {
+        'title': title,
+        'body': body,
+        'payload': payload,
+        'scheduledDate': scheduledDate,
+      };
+      
+      // Use Timer for more reliable scheduling
+      Timer(delay, () async {
+        print('🔔 Timer fired for notification: $title');
+        print('🔔 Scheduled time was: $scheduledDate');
+        print('🔔 Current time is: ${DateTime.now()}');
+        
+        // Remove from scheduled notifications
+        _scheduledNotifications.remove(id);
+        
+        // Show the notification
+        await showImmediateNotification(
+          title: title,
+          body: body,
           payload: payload,
-          androidAllowWhileIdle: true,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
         );
-        print(
-          '🔔 Using exact scheduling with allowWhileIdle - this should work for real appointments',
-        );
-      } else {
-        // Fallback to inexact scheduling
-        await _notifications.zonedSchedule(
-          id,
-          title,
-          body,
-          tzScheduledDate,
-          notificationDetails,
-          payload: payload,
-          androidAllowWhileIdle: false,
-          androidScheduleMode: AndroidScheduleMode.inexact,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-        );
-        print('🔔 Using inexact scheduling - may be delayed but should work');
-      }
-
-      if (canScheduleExact) {
-        print(
-          '✅ Notification scheduled (exact + exactAllowWhileIdle): $title at $scheduledDate',
-        );
-      } else {
-        print('✅ Notification scheduled (inexact): $title at $scheduledDate');
-      }
-
-      // CRITICAL: Add a test to see if the notification actually gets scheduled
-      print('🔍 CRITICAL: Checking if notification was actually scheduled...');
-      final pendingAfterSchedule = await _notifications
-          .pendingNotificationRequests();
-      final foundNotification = pendingAfterSchedule
-          .where((n) => n.id == id)
-          .toList();
-      if (foundNotification.isNotEmpty) {
-        print(
-          '✅ CRITICAL: Notification found in pending list after scheduling',
-        );
-        print('   - ID: ${foundNotification.first.id}');
-        print('   - Title: ${foundNotification.first.title}');
-      } else {
-        print(
-          '❌ CRITICAL: Notification NOT found in pending list after scheduling!',
-        );
-        print('   - This means the scheduling failed silently');
-      }
-
-      // Verify the notification was scheduled
-      final pendingNotifications = await _notifications
-          .pendingNotificationRequests();
-      final scheduledNotification = pendingNotifications.firstWhere(
-        (notification) => notification.id == id,
-        orElse: () => throw Exception('Notification not found in pending list'),
-      );
-      print(
-        '🔍 VERIFICATION: Notification found in pending list with ID: ${scheduledNotification.id}',
-      );
-      print('🔍 VERIFICATION: Title: ${scheduledNotification.title}');
-      print('🔍 VERIFICATION: Body: ${scheduledNotification.body}');
+        
+        print('✅ Timer-based notification shown: $title');
+      });
+      
+      print('✅ Notification scheduled with timer (ID: $id)');
+      print('✅ Will show in ${delay.inMinutes} minutes');
+      
     } catch (e) {
       print('❌ Error scheduling notification: $e');
       // Try to show immediately as fallback
@@ -459,6 +359,9 @@ class NotificationService {
     }
   }
 
+  // Store scheduled notifications for tracking
+  final Map<int, Map<String, dynamic>> _scheduledNotifications = {};
+
   /// Show immediate notification
   Future<void> showImmediateNotification({
     required String title,
@@ -466,10 +369,14 @@ class NotificationService {
     String? payload,
   }) async {
     try {
+      print('🔔 showImmediateNotification called with title: $title');
+      
       if (!_isInitialized) {
+        print('🔔 Service not initialized, initializing now...');
         await initialize();
       }
 
+      print('🔔 Creating notification details...');
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
             'immediate_notifications',
@@ -494,17 +401,29 @@ class NotificationService {
         iOS: iosDetails,
       );
 
+      print('🔔 Calling _notifications.show...');
+      final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      print('🔔 Notification ID: $notificationId');
+      
       await _notifications.show(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notificationId,
         title,
         body,
         notificationDetails,
         payload: payload,
       );
 
-      print('✅ Immediate notification shown: $title');
+      print('✅ Immediate notification shown successfully: $title');
+      print('✅ Notification ID: $notificationId');
+      
+      // Verify the notification was actually shown
+      final pending = await _notifications.pendingNotificationRequests();
+      print('🔍 Pending notifications after show: ${pending.length}');
+      
     } catch (e) {
       print('❌ Error showing immediate notification: $e');
+      print('❌ Error details: ${e.toString()}');
+      print('❌ Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -528,6 +447,46 @@ class NotificationService {
     }
   }
 
+  /// Cancel only scheduled/future notifications (not immediate ones)
+  Future<void> cancelScheduledNotifications() async {
+    try {
+      final pending = await getPendingNotifications();
+      int cancelledCount = 0;
+      
+      for (final notification in pending) {
+        // Cancel all scheduled notifications (they have IDs > 1000 typically)
+        if (notification.id > 1000) {
+          await cancelNotification(notification.id);
+          cancelledCount++;
+        }
+      }
+      
+      print('✅ Cancelled $cancelledCount scheduled notifications');
+    } catch (e) {
+      print('❌ Error cancelling scheduled notifications: $e');
+    }
+  }
+
+  /// Cancel notifications for a specific booking
+  Future<void> cancelBookingNotifications(String bookingId) async {
+    try {
+      final pending = await getPendingNotifications();
+      int cancelledCount = 0;
+      
+      for (final notification in pending) {
+        final payload = notification.payload ?? '';
+        if (payload.contains(bookingId)) {
+          await cancelNotification(notification.id);
+          cancelledCount++;
+        }
+      }
+      
+      print('✅ Cancelled $cancelledCount notifications for booking: $bookingId');
+    } catch (e) {
+      print('❌ Error cancelling booking notifications: $e');
+    }
+  }
+
   /// Get pending notifications
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     try {
@@ -541,6 +500,16 @@ class NotificationService {
       print('❌ Error getting pending notifications: $e');
       return [];
     }
+  }
+
+  /// Get scheduled notifications (timer-based)
+  Map<int, Map<String, dynamic>> getScheduledNotifications() {
+    print('📋 Scheduled notifications (timer-based): ${_scheduledNotifications.length}');
+    for (final entry in _scheduledNotifications.entries) {
+      print('   - ID: ${entry.key}, Title: ${entry.value['title']}');
+      print('     Scheduled for: ${entry.value['scheduledDate']}');
+    }
+    return _scheduledNotifications;
   }
 
   /// Handle notification tap

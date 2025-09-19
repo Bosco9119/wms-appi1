@@ -5,8 +5,11 @@ import '../../shared/models/time_slot_model.dart';
 import '../../shared/models/shop_availability_model.dart';
 import '../constants/service_types.dart';
 import 'reminder_scheduler.dart';
+import 'email_reminder_scheduler.dart';
+import 'emailjs_service.dart';
 import 'billing_service.dart';
 import 'service_progress_service.dart';
+import '../config/notification_preferences.dart';
 
 class BookingService {
   static final BookingService _instance = BookingService._internal();
@@ -16,6 +19,8 @@ class BookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ReminderScheduler _reminderScheduler = ReminderScheduler();
+  final EmailReminderScheduler _emailReminderScheduler = EmailReminderScheduler();
+  final EmailJSService _emailJSService = EmailJSService();
   final BillingService _billingService = BillingService();
   final ServiceProgressService _serviceProgressService =
       ServiceProgressService();
@@ -258,10 +263,25 @@ class BookingService {
         return booking;
       });
 
-      // Schedule reminders for the booking
+      // Schedule notifications based on preferences
       if (result != null) {
-        await _reminderScheduler.scheduleBookingReminders(result);
-        print('✅ Booking confirmed! Reminders scheduled.');
+        // Schedule push notifications (if enabled)
+        if (NotificationPreferences.usePushNotifications) {
+          await _reminderScheduler.scheduleBookingReminders(result);
+          print('✅ Push notifications scheduled.');
+        }
+        
+        // Send immediate confirmation email and schedule reminder (if enabled)
+        if (NotificationPreferences.useEmailNotifications) {
+          await _emailJSService.sendAppointmentConfirmation(result);
+          print('✅ Confirmation email sent to customer via EmailJS.');
+          
+          // Schedule 2-minute reminder email
+          await _emailReminderScheduler.scheduleEmailReminders(result);
+          print('✅ 2-minute reminder email scheduled.');
+        }
+        
+        print('✅ Booking confirmed! Notifications scheduled (${NotificationPreferences.notificationMethod}).');
 
         // Create service progress tracking
         try {

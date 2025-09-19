@@ -150,6 +150,18 @@ class NotificationSettingsService {
     await getPreferences(); // This will create default preferences
   }
 
+  /// Force reset to new default settings (removes testing intervals)
+  Future<void> resetToProductionDefaults() async {
+    _cachedPreferences = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_preferencesKey);
+    
+    // Force create new default preferences
+    _cachedPreferences = NotificationPreferences.defaultSettings();
+    await savePreferences(_cachedPreferences!);
+    print('✅ Reset to production default settings (removed testing intervals)');
+  }
+
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
     final preferences = await getPreferences();

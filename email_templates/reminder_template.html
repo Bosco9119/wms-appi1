@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appointment Reminder</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #e67e22; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .appointment-details { background: white; padding: 20px; margin: 20px 0; border-left: 4px solid #e67e22; }
+        .reminder-badge { background: #e67e22; color: white; padding: 5px 15px; border-radius: 20px; display: inline-block; margin: 10px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Appointment Reminder</h1>
+            <p>AutoAnywhere - Professional Auto Services</p>
+        </div>
+        
+        <div class="content">
+            <h2>Dear {{customer_name}},</h2>
+            
+            <div class="reminder-badge">
+                <strong>{{reminder_type}} Reminder</strong>
+            </div>
+            
+            <p>This is a friendly reminder about your upcoming appointment. We're looking forward to seeing you soon!</p>
+            
+            <div class="appointment-details">
+                <h3>📅 Your Appointment</h3>
+                <p><strong>Shop:</strong> {{shop_name}}</p>
+                <p><strong>Date:</strong> {{appointment_date}}</p>
+                <p><strong>Time:</strong> {{appointment_time}}</p>
+                <p><strong>Services:</strong> {{service_types}}</p>
+                <p><strong>Estimated Cost:</strong> ${{estimated_cost}}</p>
+                <p><strong>Booking ID:</strong> {{booking_id}}</p>
+            </div>
+            
+            <div class="appointment-details">
+                <h3>📍 Shop Information</h3>
+                <p><strong>Address:</strong> {{shop_address}}</p>
+                <p><strong>Phone:</strong> {{shop_phone}}</p>
+            </div>
+            
+            <p><strong>Please remember to:</strong></p>
+            <ul>
+                <li>Arrive 10 minutes before your scheduled time</li>
+                <li>Bring your vehicle registration and insurance documents</li>
+                <li>Have your vehicle keys ready</li>
+                <li>Remove any personal belongings from your vehicle</li>
+            </ul>
+            
+            <p>If you need to reschedule or cancel, please contact us as soon as possible.</p>
+            
+            <p>See you soon!</p>
+            
+            <p>Best regards,<br>
+            The AutoAnywhere Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated reminder. Please do not reply to this email.</p>
+            <p>© 2024 AutoAnywhere. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

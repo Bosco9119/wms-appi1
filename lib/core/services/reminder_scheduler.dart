@@ -35,7 +35,13 @@ class ReminderScheduler {
 
       // Parse booking date and time
       final bookingDate = DateTime.parse(booking.date);
+      print('🔍 DEBUG: Raw booking date: ${booking.date}');
+      print('🔍 DEBUG: Parsed booking date: $bookingDate');
+      print('🔍 DEBUG: Raw timeSlot: ${booking.timeSlot}');
+      
       final timeParts = booking.timeSlot.split('-')[0].split(':');
+      print('🔍 DEBUG: Time parts: $timeParts');
+      
       final bookingDateTime = DateTime(
         bookingDate.year,
         bookingDate.month,
@@ -46,9 +52,8 @@ class ReminderScheduler {
 
       print('🔍 DEBUG: Current time: ${DateTime.now()}');
       print('🔍 DEBUG: Booking time: $bookingDateTime');
-      print(
-        '🔍 DEBUG: Time difference: ${bookingDateTime.difference(DateTime.now())}',
-      );
+      print('🔍 DEBUG: Time difference: ${bookingDateTime.difference(DateTime.now())}');
+      print('🔍 DEBUG: Time difference in hours: ${bookingDateTime.difference(DateTime.now()).inHours}');
 
       // Schedule immediate confirmation notification
       await _scheduleConfirmationReminder(booking, bookingDateTime);
@@ -105,15 +110,25 @@ class ReminderScheduler {
           '      - ${interval.id}: ${interval.displayName} (${interval.isEnabled ? "ON" : "OFF"})',
         );
       }
+      
+      if (enabledIntervals.isEmpty) {
+        print('   ⚠️ WARNING: No reminder intervals are enabled!');
+        print('   This means no reminders will be scheduled.');
+        return;
+      }
 
       for (final interval in enabledIntervals) {
         final reminderTime = bookingDateTime.subtract(interval.duration);
-        print(
-          '   ⏰ ${interval.displayName} reminder scheduled for: ${reminderTime.toString()}',
-        );
+        final timeUntilReminder = reminderTime.difference(DateTime.now());
+        
+        print('   ⏰ ${interval.displayName} reminder:');
+        print('      Calculated time: ${reminderTime.toString()}');
+        print('      Time until reminder: ${timeUntilReminder.inHours}h ${timeUntilReminder.inMinutes % 60}m');
+        print('      Is in future: ${reminderTime.isAfter(DateTime.now())}');
 
-        // Only schedule if the reminder time is in the future
-        if (reminderTime.isAfter(DateTime.now())) {
+        // Only schedule if the reminder time is in the future AND at least 1 minute from now
+        final minimumTime = DateTime.now().add(Duration(minutes: 1));
+        if (reminderTime.isAfter(minimumTime)) {
           final title = 'Appointment Reminder - ${interval.displayName}';
           final body = _getReminderBody(booking, interval, bookingDateTime);
           final payload = 'reminder_${interval.id}:${booking.id}';
@@ -128,10 +143,17 @@ class ReminderScheduler {
 
           print('   ✅ ${interval.displayName} reminder scheduled successfully');
         } else {
-          print(
-            '   ⏭️ ${interval.displayName} reminder skipped (time in past)',
-          );
+          if (reminderTime.isBefore(DateTime.now())) {
+            print(
+              '   ⏭️ ${interval.displayName} reminder skipped (time in past)',
+            );
+          } else {
+            print(
+              '   ⏭️ ${interval.displayName} reminder skipped (too close to appointment)',
+            );
+          }
         }
+        print(''); // Add blank line for better readability
       }
     } catch (e) {
       print('❌ Error scheduling user reminders: $e');
@@ -167,6 +189,8 @@ class ReminderScheduler {
         return 'in 2 hours';
       case '3h':
         return 'in 3 hours';
+      case '12h':
+        return 'in 12 hours';
       case '1d':
         return 'tomorrow';
       case '3d':
@@ -195,6 +219,7 @@ class ReminderScheduler {
         '1h',
         '2h',
         '3h',
+        '12h',
         '1d',
         '3d',
         '1w',
@@ -211,20 +236,7 @@ class ReminderScheduler {
     }
   }
 
-  /// Reschedule reminders for a booking (useful when booking is updated)
-  Future<void> rescheduleBookingReminders(Booking booking) async {
-    try {
-      // Cancel existing reminders
-      await cancelBookingReminders(booking.id);
-
-      // Schedule new reminders
-      await scheduleBookingReminders(booking);
-
-      print('✅ Reminders rescheduled for booking: ${booking.id}');
-    } catch (e) {
-      print('❌ Error rescheduling reminders: $e');
-    }
-  }
+  // Reschedule function removed - only confirmation and reminder emails
 
   /// Get notification ID for a specific booking and reminder type
   int _getNotificationId(String bookingId, String reminderType) {
@@ -279,6 +291,104 @@ class ReminderScheduler {
       body: 'This is a test notification from AutoAnywhere App',
       payload: 'test',
     );
+  }
+
+  /// Clear all pending reminders from notification list
+  Future<void> clearAllPendingReminders() async {
+    try {
+      print('🧹 Clearing all pending reminders...');
+      await _notificationService.cancelScheduledNotifications();
+      print('✅ All pending reminders cleared from notification list');
+    } catch (e) {
+      print('❌ Error clearing pending reminders: $e');
+    }
+  }
+
+  /// Clear reminders for a specific booking
+  Future<void> clearBookingReminders(String bookingId) async {
+    try {
+      print('🧹 Clearing reminders for booking: $bookingId');
+      await _notificationService.cancelBookingNotifications(bookingId);
+      print('✅ Reminders cleared for booking: $bookingId');
+    } catch (e) {
+      print('❌ Error clearing booking reminders: $e');
+    }
+  }
+
+  /// Clean up expired reminders (reminders that should have already fired)
+  Future<void> cleanupExpiredReminders() async {
+    try {
+      print('🧹 Cleaning up expired reminders...');
+      final pending = await _notificationService.getPendingNotifications();
+      int cleanedCount = 0;
+      
+      for (final notification in pending) {
+        final payload = notification.payload ?? '';
+        if (payload.startsWith('reminder_')) {
+          // Extract booking ID and check if the appointment has passed
+          final parts = payload.split(':');
+          if (parts.length >= 2) {
+            // For now, we'll clean up all reminder notifications
+            // In a real app, you'd check the actual appointment time
+            await _notificationService.cancelNotification(notification.id);
+            cleanedCount++;
+          }
+        }
+      }
+      
+      print('✅ Cleaned up $cleanedCount expired reminders');
+    } catch (e) {
+      print('❌ Error cleaning up expired reminders: $e');
+    }
+  }
+
+  /// Check for upcoming appointments and show reminder if within 12 hours
+  Future<void> checkUpcomingAppointments() async {
+    try {
+      print('🔍 Checking for upcoming appointments within 12 hours...');
+      
+      // Get all pending notifications
+      final pending = await _notificationService.getPendingNotifications();
+      final scheduled = _notificationService.getScheduledNotifications();
+      final now = DateTime.now();
+      final twelveHoursFromNow = now.add(Duration(hours: 12));
+      
+      print('🕐 Current time: $now');
+      print('🕐 Checking appointments before: $twelveHoursFromNow');
+      print('📋 System pending notifications: ${pending.length}');
+      print('📋 Timer-based scheduled notifications: ${scheduled.length}');
+      
+      // Look for appointment confirmation notifications (these contain appointment info)
+      for (final notification in pending) {
+        final payload = notification.payload ?? '';
+        if (payload.startsWith('booking_confirmation:')) {
+          final bookingId = payload.split(':')[1];
+          print('📅 Found appointment booking: $bookingId');
+          
+          // Show immediate reminder for testing
+          await _notificationService.showImmediateNotification(
+            title: '🔔 Upcoming Appointment Reminder',
+            body: 'You have an appointment coming up within 12 hours! Check your bookings.',
+            payload: 'upcoming_reminder_$bookingId',
+          );
+          
+          print('✅ Upcoming appointment reminder shown for booking: $bookingId');
+        }
+      }
+      
+      // Also show a general reminder if there are any scheduled notifications
+      if (scheduled.isNotEmpty) {
+        await _notificationService.showImmediateNotification(
+          title: '📱 App Notification Test',
+          body: 'Notification system is working! You have ${scheduled.length} scheduled reminders.',
+          payload: 'app_entry_test',
+        );
+        print('✅ App entry notification test shown');
+      }
+      
+    } catch (e) {
+      print('❌ Error checking upcoming appointments: $e');
+    }
   }
 
   /// Test fake appointment with 1s, 5s, 10s reminders

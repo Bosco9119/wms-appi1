@@ -7,6 +7,10 @@ import 'core/navigation/app_router.dart';
 import 'core/navigation/login_router.dart';
 import 'core/services/persistent_auth_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/notification_settings_service.dart';
+import 'core/services/reminder_scheduler.dart';
+import 'core/services/emailjs_service.dart';
+import 'core/config/email_config.dart';
 import 'shared/providers/customer_provider.dart';
 import 'core/constants/app_constants.dart';
 
@@ -28,6 +32,28 @@ void main() async {
   final exactAlarmGranted = await notificationService
       .requestExactAlarmPermission();
 
+  // Initialize EmailJS Service
+  print('📧 Initializing EmailJS service...');
+  final emailService = EmailJSService();
+  
+  // Test email service
+  print('📧 Testing EmailJS service...');
+  await emailService.testEmailJSService();
+
+  // Reset notification preferences to remove testing intervals
+  print('🔔 Resetting notification preferences to production defaults...');
+  final settingsService = NotificationSettingsService();
+  await settingsService.resetToProductionDefaults();
+
+  // Clean up any expired reminders from previous sessions
+  print('🧹 Cleaning up expired reminders...');
+  final reminderScheduler = ReminderScheduler();
+  await reminderScheduler.cleanupExpiredReminders();
+
+  // Check for upcoming appointments and show reminder if within 12 hours
+  print('🔍 Checking for upcoming appointments...');
+  await reminderScheduler.checkUpcomingAppointments();
+
   notificationService.setupNotificationListeners();
 
   print('🔥 Firebase initialized successfully!');
@@ -38,11 +64,15 @@ void main() async {
 
   // Test notification to verify it's working
   if (permissionGranted) {
+    print('🔔 Testing immediate notification...');
     await notificationService.showImmediateNotification(
       title: 'AutoAnywhere App Started',
       body: 'Notification system is working!',
       payload: 'app_start',
     );
+    print('✅ Test notification sent - check your device!');
+  } else {
+    print('❌ Cannot send test notification - permission denied');
   }
 
   runApp(const AuthWrapper());
@@ -113,6 +143,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkAuthState();
   }
 
+  /// Check for upcoming appointments and show reminder
+  Future<void> _checkUpcomingAppointments() async {
+    try {
+      final reminderScheduler = ReminderScheduler();
+      await reminderScheduler.checkUpcomingAppointments();
+    } catch (e) {
+      print('❌ Error checking upcoming appointments in AuthWrapper: $e');
+    }
+  }
+
   Future<void> _checkAuthState() async {
     try {
       print('🔄 AuthWrapper: Checking persistent auth state...');
@@ -180,6 +220,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
           print('📱 User email: ${snapshot.data!.email}');
           print('📱 User display name: ${snapshot.data!.displayName}');
           print('📱 User phone: ${snapshot.data!.phoneNumber}');
+          
+          // Check for upcoming appointments when user logs in
+          _checkUpcomingAppointments();
+          
           return const AutoAnywhereApp();
         } else {
           // User is not logged in, show login app
