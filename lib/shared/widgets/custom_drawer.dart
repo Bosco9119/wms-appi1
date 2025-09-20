@@ -171,12 +171,6 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.account_balance_wallet,
-                  title: 'E-Wallet',
-                  route: RouteNames.wallet,
-                ),
-                _buildDrawerItem(
-                  context,
                   icon: Icons.receipt,
                   title: 'Bill',
                   route: RouteNames.billing,

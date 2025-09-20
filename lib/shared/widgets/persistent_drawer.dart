@@ -98,15 +98,6 @@ class PersistentDrawer extends StatelessWidget {
                   isSelected: _isCurrentRoute(context, RouteNames.billing),
                 ),
 
-                // E-Wallet
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.account_balance_wallet,
-                  title: 'E-Wallet',
-                  route: RouteNames.wallet,
-                  isSelected: _isCurrentRoute(context, RouteNames.wallet),
-                ),
-
                 // Feedback
                 _buildDrawerItem(
                   context,
@@ -125,22 +116,6 @@ class PersistentDrawer extends StatelessWidget {
                   title: 'Settings',
                   route: RouteNames.settings,
                   isSelected: _isCurrentRoute(context, RouteNames.settings),
-                ),
-
-                // Help & Support
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.help,
-                  title: 'Help & Support',
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Navigate to help
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Help & Support coming soon!'),
-                      ),
-                    );
-                  },
                 ),
 
                 const Divider(),

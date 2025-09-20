@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../services/billing_service.dart';
 import '../../modules/customer/screens/customer_home_screen.dart';
 import '../../modules/customer/screens/schedule_screen.dart';
 import '../../modules/billing/screens/invoice_list_screen.dart';
-import '../../modules/e_wallet/screens/wallet_screen.dart';
 import '../../modules/feedback/screens/feedback_screen.dart';
 import '../../modules/feedback/screens/feedback_form_screen.dart';
 import '../../shared/models/service_progress_model.dart';
@@ -17,7 +15,6 @@ import '../../modules/billing/screens/invoice_details_screen.dart';
 import '../../modules/settings/screens/settings_screen.dart';
 import '../../modules/settings/screens/notification_settings_screen.dart';
 import '../../modules/notifications/screens/notifications_screen.dart';
-import '../../modules/payment/screens/payment_history_screen.dart';
 import '../../shared/widgets/persistent_layout.dart';
 
 class AppRouter {
@@ -85,12 +82,6 @@ class AppRouter {
               title: 'Billing & Invoices',
               child: InvoiceListScreen(),
             ),
-          ),
-          GoRoute(
-            path: '/wallet',
-            name: 'wallet',
-            builder: (context, state) =>
-                const PersistentPage(title: 'E-Wallet', child: WalletScreen()),
           ),
           GoRoute(
             path: '/feedback',
@@ -214,7 +205,6 @@ class AppRouter {
               );
             },
           ),
-
         ],
       ),
     ],
